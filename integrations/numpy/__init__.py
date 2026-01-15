@@ -21,12 +21,6 @@ __prey__ = 'numpy/numpy'
 __coherence__ = 0.88
 
 __all__ = [
-    'WisdomLens',
-    'RhoDimensionReading',
-    'RigorAspect',
-    'MathematicalContext',
-    'CoherenceAnalyzer',
-    'PatternDecomposition',
-    'FrequencyPattern',
-    'CoherenceResult',
+    'WisdomLens', 'RhoDimensionReading', 'RigorAspect', 'MathematicalContext',
+    'CoherenceAnalyzer', 'PatternDecomposition', 'FrequencyPattern', 'CoherenceResult',
 ]
