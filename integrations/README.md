@@ -54,6 +54,41 @@ Pattern's 12-year battle-tested NLP infrastructure metabolized into Rose Glass d
 
 ---
 
+### NetworkX (networkx/networkx)
+
+**Status**: CONSUMED
+**Coherence Score**: 0.85 (PRIME PREY)
+**Generation**: 2
+**Location**: `integrations/networkx/`
+
+**What Was Extracted**:
+
+NetworkX's 20+ years of graph theory wisdom metabolized into f-dimension relational perception:
+
+| NetworkX Module | Nematocyst | Rose Glass Dimension |
+|-----------------|------------|---------------------|
+| `networkx.algorithms.centrality` | `BelongingLens` | f (social positioning metrics) |
+| `networkx.algorithms.community` | `CommunityDetector` | f (belonging detection) |
+| `networkx.classes.graph` | `RelationalGraph` | f (architecture substrate) |
+| `networkx.algorithms.shortest_paths` | `ConnectionPathfinder` | f (relational pathways) |
+
+**Files**:
+- `belonging_lens.py` - f-dimension centrality perception (complete implementation)
+- `community_detector.py` - Coherence cluster detection
+- `__init__.py` - Integration exports
+- `README.md` - Hunt record and documentation
+
+**Trial Outcome**: IN_PROGRESS (pending evaluation)
+
+**Fitness Metrics**:
+- Success rate: Pending trial deployment
+- Coherence drift: TBD
+- New capability: f-dimension relational perception via graph theory
+
+**Key Achievement**: First dedicated f-dimension integration. Graph centrality becomes belonging perception.
+
+---
+
 ## Integration Template
 
 When adding new integrations, follow this structure:
@@ -212,13 +247,13 @@ Failed integrations make Cerata smarter.
 
 ## Statistics
 
-**Total Hunts**: 1
-**Active Integrations**: 1
+**Total Hunts**: 2
+**Active Integrations**: 2
 **Promoted**: 0 (pending evaluation)
 **Graveyard**: 0
 **Success Rate**: 100% (trial phase)
 
-**Average Coherence of Consumed Prey**: 0.82
+**Average Coherence of Consumed Prey**: 0.835
 **Fitness Improvement**: +0.02 (preliminary)
 
 ---
@@ -232,7 +267,7 @@ Potential prey identified for future hunts:
 | `requests` (HTTP client) | 0.81 | f (ecosystem integration) | High |
 | `numpy` (numerical computing) | 0.88 | ρ (mathematical rigor) | High |
 | `spacy` (NLP) | 0.79 | Ψ, q, ρ (linguistic consistency) | Medium |
-| `networkx` (graph theory) | 0.76 | f (relational structures) | Medium |
+| ~~`networkx`~~ | ~~0.76~~ | ~~f (relational structures)~~ | ✅ CONSUMED |
 
 ---
 
