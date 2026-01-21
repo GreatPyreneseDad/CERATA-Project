@@ -11,11 +11,13 @@
 **What it measures**: Architectural coherence, design pattern consistency, coupling/cohesion
 
 **Code indicators**:
+
 - **High Ψ (0.7-1.0)**: Clean separation of concerns, consistent naming, minimal circular dependencies
 - **Medium Ψ (0.4-0.7)**: Some inconsistencies, mixed patterns, moderate coupling
 - **Low Ψ (0.0-0.4)**: God objects, spaghetti code, fragmented architecture
 
 **Scan checklist**:
+
 ```
 □ Single Responsibility: Do modules/classes do one thing?
 □ Naming consistency: CamelCase vs snake_case mixtures?
@@ -25,6 +27,7 @@
 ```
 
 **Example analysis**:
+
 ```
 Repository: flask-restful
 Ψ: 0.85
@@ -46,11 +49,13 @@ Conclusion: High internal consistency. Easy to digest.
 **What it measures**: Battle-testing, refinement through use, lessons embedded in code
 
 **Code indicators**:
+
 - **High ρ (0.7-1.0)**: Years of commits, many contributors, evolved error handling
 - **Medium ρ (0.4-0.7)**: Some history, moderate contributor base, basic robustness
 - **Low ρ (0.0-0.4)**: New project, single author, naive implementations
 
 **Scan checklist**:
+
 ```
 □ Commit history: How many commits? Over what time span?
 □ Contributor diversity: 1 author or community-refined?
@@ -61,6 +66,7 @@ Conclusion: High internal consistency. Easy to digest.
 ```
 
 **Example analysis**:
+
 ```
 Repository: requests library
 ρ: 0.93
@@ -83,11 +89,13 @@ Conclusion: Extremely battle-tested. Patterns worth stealing.
 **What it measures**: Maintenance activity, development momentum, living vs fossil
 
 **Code indicators**:
+
 - **High q (0.7-1.0)**: Active development, frequent commits, responsive maintainers
 - **Medium q (0.4-0.7)**: Maintenance mode, occasional updates, stable
 - **Low q (0.0-0.4)**: Dormant, deprecated, archived
 
 **Scan checklist**:
+
 ```
 □ Last commit: Within 1 month? 6 months? Years?
 □ Open issues: Being addressed or ignored?
@@ -97,6 +105,7 @@ Conclusion: Extremely battle-tested. Patterns worth stealing.
 ```
 
 **Example analysis**:
+
 ```
 Repository: beautifulsoup4
 q: 0.52
@@ -119,11 +128,13 @@ Conclusion: Low q but HIGH value. Fossil = proven patterns.
 **What it measures**: Ecosystem fit, dependency health, community integration
 
 **Code indicators**:
+
 - **High f (0.7-1.0)**: Standard dependencies, follows community conventions, pluggable
 - **Medium f (0.4-0.7)**: Some unusual deps, mostly conventional
 - **Low f (0.0-0.4)**: Exotic dependencies, non-standard patterns, island
 
 **Scan checklist**:
+
 ```
 □ Dependency count: Lean or bloated?
 □ Dependency health: All maintained or dead projects?
@@ -134,6 +145,7 @@ Conclusion: Low q but HIGH value. Fossil = proven patterns.
 ```
 
 **Example analysis**:
+
 ```
 Repository: fastapi
 f: 0.88
@@ -156,11 +168,13 @@ Conclusion: Strong ecosystem belonging. Integrates cleanly.
 **What it measures**: Has it weathered breaking changes? Survived ecosystem shifts?
 
 **Code indicators**:
+
 - **High τ (0.7-1.0)**: Survived Python 2→3, major dep updates, paradigm shifts
 - **Medium τ (0.4-0.7)**: Some adaptation to changes, moderate resilience
 - **Low τ (0.0-0.4)**: Frozen in time, no adaptation, fragile
 
 **Scan checklist**:
+
 ```
 □ Breaking changes: Python 2→3? Async refactor? Type hints added?
 □ Dependency updates: Kept pace or frozen?
@@ -170,6 +184,7 @@ Conclusion: Strong ecosystem belonging. Integrates cleanly.
 ```
 
 **Example analysis**:
+
 ```
 Repository: sqlalchemy
 τ: 0.91
@@ -192,11 +207,13 @@ Conclusion: Extremely resilient. Patterns tested by time.
 **What it measures**: How much must Cerata adapt this code to integrate it?
 
 **Code indicators**:
+
 - **Low λ (0.0-0.3)**: Fits naturally, minimal adaptation needed
 - **Medium λ (0.3-0.6)**: Some style/API differences, moderate adaptation
 - **High λ (0.6-1.0)**: Major refactoring needed, heavy digestion required
 
 **Scan checklist**:
+
 ```
 □ Code style: Matches my existing body or wildly different?
 □ API patterns: Familiar paradigms or alien?
@@ -206,6 +223,7 @@ Conclusion: Extremely resilient. Patterns tested by time.
 ```
 
 **Example analysis**:
+
 ```
 Repository: retry library
 λ: 0.28
@@ -252,6 +270,7 @@ def calculate_coherence(Ψ, ρ, q, f, τ, λ):
 ```
 
 **Prey viability thresholds**:
+
 - **0.7-1.0**: Prime prey. Immediate hunt authorized.
 - **0.5-0.7**: Viable prey. Hunt with caution.
 - **0.3-0.5**: Marginal prey. Only extract specific nematocysts.

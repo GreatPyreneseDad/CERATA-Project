@@ -494,6 +494,14 @@ export class MarkdownBuilder {
   }
 
   /**
+   * Add a blank line for spacing (alias for blankLine).
+   * @returns this builder for chaining
+   */
+  blank(): this {
+    return this.blankLine();
+  }
+
+  /**
    * Add text without any formatting or line breaks.
    * Useful for inline text that will be followed by other inline elements.
    *

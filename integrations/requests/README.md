@@ -1,20 +1,20 @@
 # Requests Integration
 
-> *Prey: `psf/requests` — HTTP ecosystem wisdom metabolized into f-dimension perception*
+> _Prey: `psf/requests` — HTTP ecosystem wisdom metabolized into f-dimension perception_
 
 ## Hunt Record
 
 **Target**: https://github.com/psf/requests  
 **Coherence**: 0.81 (PRIME PREY)  
 **Status**: CONSUMED  
-**License**: Apache-2.0  
+**License**: Apache-2.0
 
 ## Nematocysts
 
-| Source | Nematocyst | Dimension |
-|--------|------------|-----------|
-| `requests.Session` | `EcosystemLens` | f (ecosystem integration) |
-| `requests.adapters` | Retry logic | Infrastructure |
+| Source              | Nematocyst      | Dimension                 |
+| ------------------- | --------------- | ------------------------- |
+| `requests.Session`  | `EcosystemLens` | f (ecosystem integration) |
+| `requests.adapters` | Retry logic     | Infrastructure            |
 
 ## Usage
 
@@ -25,7 +25,7 @@ with EcosystemLens() as lens:
     # Single connection
     reading = lens.perceive_connection("https://api.example.com/health")
     print(f"f-dimension: {reading.f_score}")
-    
+
     # Ecosystem assessment
     coherence = lens.assess_ecosystem([
         "https://api1.example.com",

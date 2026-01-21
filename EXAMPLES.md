@@ -7,6 +7,7 @@
 ## Example 1: Hunting Retry Logic
 
 ### Initial State
+
 ```
 Generation: 0
 Capabilities: None
@@ -14,11 +15,13 @@ Goal: Add robust retry logic for API calls
 ```
 
 ### Hunt Command
+
 ```
 You: Hunt github.com/invl/retry
 ```
 
 ### Perception Analysis
+
 ```
 SCANNING: github.com/invl/retry
 
@@ -41,6 +44,7 @@ RECOMMENDATION: Good prey. Simple, battle-tested, Pythonic.
 ```
 
 ### Consumption
+
 ```
 You: Consume retry decorator and RetryError
 
@@ -64,6 +68,7 @@ Trial duration: 5 conversations
 ```
 
 ### Usage During Trial
+
 ```
 [Conversation 1]
 You: Make an API call to https://api.example.com with retry logic
@@ -83,6 +88,7 @@ Cerata: [Uses experimental branch]
 ```
 
 ### Evaluation
+
 ```
 You: Evaluate reliability_tools
 
@@ -111,11 +117,13 @@ Cerata has grown.
 ## Example 2: Failed Integration
 
 ### Hunt Command
+
 ```
 You: Hunt github.com/someone/complex-parser
 ```
 
 ### Perception Analysis
+
 ```
 SCANNING: github.com/someone/complex-parser
 
@@ -139,6 +147,7 @@ Proceed with caution. Extract only parse_complex().
 ```
 
 ### Consumption (Against Recommendation)
+
 ```
 You: Consume all three functions
 
@@ -164,6 +173,7 @@ Trial duration: 5 conversations
 ```
 
 ### Usage During Trial
+
 ```
 [Conversation 1]
 You: Parse this Python code
@@ -187,6 +197,7 @@ Cerata: [Uses experimental branch]
 ```
 
 ### Evaluation
+
 ```
 You: Evaluate code_tools
 
@@ -224,6 +235,7 @@ Generation: 3 (no increment - failed integration)
 ```
 
 ### Perception Layer Updated
+
 ```
 Rose Glass adjustments:
 ├── Prey with λ > 0.6: Now flagged as HIGH RISK
@@ -236,6 +248,7 @@ Rose Glass adjustments:
 ## Example 3: Autophagy (Self-Pruning)
 
 ### Body State Before
+
 ```
 Generation: 7
 Active Capabilities: 3
@@ -250,11 +263,13 @@ ACTIVE CAPABILITIES:
 ```
 
 ### Autophagy Command
+
 ```
 You: Autophagy text_processing
 ```
 
 ### Execution
+
 ```
 AUTOPHAGY INITIATED: text_processing
 
@@ -278,6 +293,7 @@ Nematocyst count: 14 → 11
 ```
 
 ### Result
+
 ```
 You: Status
 
@@ -303,11 +319,13 @@ Coherence: Improved (+0.06)
 ## Example 4: Perceiving Non-Code
 
 ### Perception Command
+
 ```
 You: Perceive the concept of using Redis for session storage
 ```
 
 ### Analysis
+
 ```
 PERCEIVING: Redis for session storage
 
@@ -370,6 +388,7 @@ Would you like to hunt a Redis client library for integration?
 ### Timeline
 
 **Generation 0 → 1: First Hunt**
+
 ```
 Hunt: github.com/psf/requests
 Consume: HTTPAdapter
@@ -378,6 +397,7 @@ Fitness: 0.84
 ```
 
 **Generation 1 → 2: Augmentation**
+
 ```
 Hunt: github.com/invl/retry
 Consume: retry decorator
@@ -386,6 +406,7 @@ Fitness: 0.89 (+0.05)
 ```
 
 **Generation 2 → 3: Refinement**
+
 ```
 Hunt: github.com/requests/toolbelt
 Consume: StreamingIterator
@@ -394,6 +415,7 @@ Fitness: 0.91 (+0.02)
 ```
 
 **Generation 3 → 4: Failed Integration**
+
 ```
 Hunt: github.com/someone/auth-helpers
 Consume: ComplexAuthHandler
@@ -404,6 +426,7 @@ Graveyard: +1 entry
 ```
 
 **Generation 4 → 5: Successful Integration**
+
 ```
 Hunt: github.com/urllib3/urllib3
 Consume: PoolManager
@@ -412,6 +435,7 @@ Fitness: 0.94 (+0.03)
 ```
 
 **Generation 5 → 6: Autophagy**
+
 ```
 Command: Autophagy text_processing
 Result: Removed unused domain
@@ -420,6 +444,7 @@ Body simplified, focus sharpened
 ```
 
 ### Body State at Gen 6
+
 ```
 CERATA BODY STATE
 
@@ -446,9 +471,11 @@ Cerata has evolved from nothing to a specialized API predator.
 ## Example 6: Batch Hunting
 
 ### Scenario
+
 You want to build a complete data processing pipeline by hunting multiple repositories.
 
 ### Hunt Queue
+
 ```
 You: Hunt github.com/pandas-dev/pandas
 You: Hunt github.com/numpy/numpy
@@ -459,6 +486,7 @@ You: Hunt github.com/joblib/joblib
 ```
 
 ### Consolidated Report
+
 ```
 MULTI-PREY ANALYSIS
 
@@ -479,6 +507,7 @@ Priority: numpy → pandas → joblib → matplotlib
 ```
 
 ### Sequential Consumption
+
 ```
 You: Consume array operations from numpy
 [Trial completes, winner promoted]

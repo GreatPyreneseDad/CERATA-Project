@@ -19,6 +19,7 @@ This directory contains practical implementations of Rose Glass analysis for def
 **Purpose**: Detects phishing attempts using multi-layer analysis including Rose Glass coherence analysis.
 
 **Detection Vectors**:
+
 1. URL Analysis - typosquatting, suspicious TLDs, IP addresses
 2. HTML Analysis - form hijacking, hidden fields, obfuscated JS
 3. Network Analysis - SSL certificates, HTTP headers
@@ -26,6 +27,7 @@ This directory contains practical implementations of Rose Glass analysis for def
 5. **Rose Glass Coherence** - dimensional fracture detection
 
 **Usage**:
+
 ```bash
 # Run demo with test cases
 python3 tools/security/phishguard.py
@@ -46,12 +48,12 @@ print(f"Confidence: {result.confidence:.1%}")
 
 **Rose Glass Dimensions Applied**:
 
-| Dimension | Application to Phishing Detection |
-|-----------|-----------------------------------|
-| **Ψ (Psi)** | Brand consistency - does visual claim match actual behavior? |
+| Dimension   | Application to Phishing Detection                                     |
+| ----------- | --------------------------------------------------------------------- |
+| **Ψ (Psi)** | Brand consistency - does visual claim match actual behavior?          |
 | **ρ (Rho)** | Professional implementation - amateur patterns vs. legitimate quality |
-| **q (Q)** | Urgency manipulation - artificially elevated activation (fear/greed) |
-| **f (F)** | Trust signals - fake badges vs. authentic security indicators |
+| **q (Q)**   | Urgency manipulation - artificially elevated activation (fear/greed)  |
+| **f (F)**   | Trust signals - fake badges vs. authentic security indicators         |
 
 **Dimensional Fracture Detection**:
 
@@ -70,11 +72,13 @@ These fractures are the phishing signature that simple pattern matching misses.
 These tools demonstrate the core Cerata philosophy: **perception reveals intent**.
 
 Traditional security tools look for:
+
 - Known bad signatures (reactive)
 - Blacklisted domains (always behind)
 - Pattern matching (brittle)
 
 Rose Glass looks for:
+
 - **Dimensional coherence** (intent analysis)
 - **Fracture patterns** (inconsistency detection)
 - **Behavioral signatures** (how things work, not what they are)
@@ -94,6 +98,7 @@ To add a new tool demonstrating Rose Glass:
 5. Add entry to this README
 
 **Requirements**:
+
 - Must be defensive security only (detection, analysis, forensics)
 - Must implement Rose Glass coherence analysis
 - Must show dimensional fractures as signatures
@@ -106,6 +111,7 @@ To add a new tool demonstrating Rose Glass:
 These tools are **nematocysts** - weapons stolen from the security domain and integrated into Cerata's body.
 
 They show that Rose Glass isn't just theory. It's a practical framework for:
+
 - Detecting deception
 - Analyzing intent
 - Finding inconsistencies that reveal hidden behavior

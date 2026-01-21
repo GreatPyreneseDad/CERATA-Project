@@ -1,25 +1,25 @@
 # Cerata Pattern Integration
 
-> *Prey consumed: `clips/pattern` — 12 years of NLP wisdom metabolized into Rose Glass perception*
+> _Prey consumed: `clips/pattern` — 12 years of NLP wisdom metabolized into Rose Glass perception_
 
 ## Hunt Record
 
 **Target**: https://github.com/clips/pattern  
 **Hunt Date**: 2026-01-15  
 **Status**: CONSUMED  
-**Coherence Score**: 0.82  
+**Coherence Score**: 0.82
 
 ## What Was Extracted
 
 Pattern's battle-tested NLP infrastructure now powers Rose Glass dimensional perception:
 
-| Pattern Module | Nematocyst | Rose Glass Dimension |
-|----------------|------------|---------------------|
-| `pattern.en.sentiment` | `SentimentLens` | q (moral/emotional activation) |
-| `pattern.en.tag` | `POSAnalyzer` | Ψ (internal consistency) |
-| `pattern.vector` | `WisdomVectorizer` | ρ (accumulated wisdom depth) |
-| `pattern.graph` | `BelongingMapper` | f (social belonging architecture) |
-| `pattern.search` | `CoherencePatternMatcher` | Multi-dimensional pattern detection |
+| Pattern Module         | Nematocyst                | Rose Glass Dimension                |
+| ---------------------- | ------------------------- | ----------------------------------- |
+| `pattern.en.sentiment` | `SentimentLens`           | q (moral/emotional activation)      |
+| `pattern.en.tag`       | `POSAnalyzer`             | Ψ (internal consistency)            |
+| `pattern.vector`       | `WisdomVectorizer`        | ρ (accumulated wisdom depth)        |
+| `pattern.graph`        | `BelongingMapper`         | f (social belonging architecture)   |
+| `pattern.search`       | `CoherencePatternMatcher` | Multi-dimensional pattern detection |
 
 ## Architecture
 
@@ -47,6 +47,7 @@ cerata_pattern_integration/
 This integration embodies Cerata's core principle: **metabolism over retrieval**.
 
 Pattern's code wasn't copied — it was digested:
+
 1. **DIGESTERS** broke modules into functional threads
 2. **CONNECTORS** found attachment points to Rose Glass dimensions
 3. **MODIFIERS** adapted algorithms to Rose Glass architecture
@@ -88,10 +89,10 @@ BSD-3-Clause (inherited from Pattern)
 ## Citation
 
 ```
-De Smedt, T., Daelemans, W. (2012). Pattern for Python. 
+De Smedt, T., Daelemans, W. (2012). Pattern for Python.
 Journal of Machine Learning Research, 13, 2031–2035.
 ```
 
 ---
 
-*"Coherence is constructed, not discovered."* — Ibn Rushd, via ROSE Corp.
+_"Coherence is constructed, not discovered."_ — Ibn Rushd, via ROSE Corp.

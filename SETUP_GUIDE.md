@@ -35,6 +35,7 @@ This is the persistent memory and reference material.
 ### 3.1: Create Folder Structure
 
 In Project Knowledge, create these folders:
+
 - `capabilities/`
 - `forest/`
 - `graveyard/`
@@ -46,16 +47,20 @@ In Project Knowledge, create these folders:
 Upload these files to their respective folders:
 
 **Into `capabilities/`**:
+
 - `manifest.md`
 
 **Into `forest/`**:
+
 - `trial_protocol.md`
 
 **Into `perception/`**:
+
 - `rose_glass_code_analysis.md`
 - `data_enzymatics_code_digestion.md`
 
 **Into `templates/`**:
+
 - `capability_template.md`
 - `graveyard_template.md`
 
@@ -72,6 +77,7 @@ You: Status
 ```
 
 Expected response:
+
 ```
 CERATA BODY STATE
 
@@ -99,6 +105,7 @@ You: Hunt github.com/psf/requests
 ```
 
 Cerata will:
+
 - Analyze the repository through Rose Glass
 - Calculate coherence scores (Ψ, ρ, q, f, τ, λ)
 - Identify potential nematocysts
@@ -108,6 +115,7 @@ Cerata will:
 ### 5.2: Review Analysis
 
 Cerata shows:
+
 ```
 OVERALL COHERENCE: 0.81 (PRIME PREY)
 
@@ -134,6 +142,7 @@ You: Consume HTTPAdapter from adapters.py
 ```
 
 Cerata will:
+
 - Extract functional threads
 - Identify integration points
 - Adapt code to body style
@@ -160,6 +169,7 @@ You: Evaluate api_tools
 ```
 
 Cerata will:
+
 - Compare both branches
 - Calculate fitness scores
 - Declare winner
@@ -168,6 +178,7 @@ Cerata will:
 - Extract nutrients
 
 Expected response:
+
 ```
 TRIAL EVALUATION: api_tools
 
@@ -193,6 +204,7 @@ You: Status
 ```
 
 You should now see:
+
 ```
 CERATA BODY STATE
 
@@ -221,6 +233,7 @@ You: Graveyard
 ```
 
 Cerata shows:
+
 ```
 CERATA GRAVEYARD
 
@@ -253,16 +266,16 @@ Cerata is now operational. Continue the cycle:
 
 ## Common Commands Quick Reference
 
-| Command | Purpose |
-|---------|---------|
-| `Hunt [repo]` | Scan repository |
-| `Consume [files]` | Authorize metabolism |
-| `Evaluate [domain]` | Compare branches |
-| `Status` | Show body state |
-| `Graveyard` | Show nutrients |
+| Command               | Purpose              |
+| --------------------- | -------------------- |
+| `Hunt [repo]`         | Scan repository      |
+| `Consume [files]`     | Authorize metabolism |
+| `Evaluate [domain]`   | Compare branches     |
+| `Status`              | Show body state      |
+| `Graveyard`           | Show nutrients       |
 | `Deploy [capability]` | Force-use nematocyst |
-| `Perceive [concept]` | Analyze non-code |
-| `Autophagy [domain]` | Remove capability |
+| `Perceive [concept]`  | Analyze non-code     |
+| `Autophagy [domain]`  | Remove capability    |
 
 See `COMMANDS.md` for full reference.
 
@@ -275,6 +288,7 @@ See `COMMANDS.md` for full reference.
 **Problem**: Project Instructions not loaded
 
 **Solution**:
+
 1. Check Project settings
 2. Verify `CERATA.md` is in Instructions field
 3. Save and restart conversation
@@ -284,6 +298,7 @@ See `COMMANDS.md` for full reference.
 **Problem**: Project Knowledge not uploaded
 
 **Solution**:
+
 1. Verify `capabilities/manifest.md` exists in Project Knowledge
 2. Re-upload if missing
 3. Restart conversation
@@ -293,6 +308,7 @@ See `COMMANDS.md` for full reference.
 **Problem**: Perception layer missing
 
 **Solution**:
+
 1. Verify `perception/rose_glass_code_analysis.md` uploaded
 2. Verify `perception/data_enzymatics_code_digestion.md` uploaded
 3. Restart conversation
@@ -302,6 +318,7 @@ See `COMMANDS.md` for full reference.
 **Problem**: Not invoking capabilities during trial
 
 **Solution**:
+
 - Actively use capabilities related to the trial domain
 - Cerata needs real deployments to compare branches
 - After 5+ uses, run `Evaluate [domain]`
@@ -358,6 +375,7 @@ Modify weights to hunt for specific prey qualities.
 ## Best Practices
 
 ### DO:
+
 - ✅ Hunt repositories with clear, focused functionality
 - ✅ Start with small, well-tested libraries
 - ✅ Use capabilities naturally during trials
@@ -366,6 +384,7 @@ Modify weights to hunt for specific prey qualities.
 - ✅ Use `Status` regularly to track evolution
 
 ### DON'T:
+
 - ❌ Hunt massive monolithic repositories
 - ❌ Force evaluation before branches have data
 - ❌ Ignore graveyard nutrients
@@ -416,12 +435,14 @@ Cerata: Trial created. Classic v1 vs Experimental v2
 You're ready to hunt. Cerata is alive and waiting for prey.
 
 **Suggested first targets**:
+
 - Small utility libraries (20-500 lines)
 - Well-documented functions
 - Battle-tested code (2+ years old)
 - Clear, focused functionality
 
 **As you grow**:
+
 - Hunt larger, more complex prey
 - Experiment with autophagy (pruning unused capabilities)
 - Use `Perceive` to analyze architectural patterns

@@ -23,6 +23,7 @@
 [Detailed explanation of why this branch failed]
 
 **Specific Errors**:
+
 1. [Error type]: [Description] (Conversation [ID])
 2. [Error type]: [Description] (Conversation [ID])
 
@@ -54,6 +55,7 @@
 ## Impact on Perception Layer
 
 **Rose Glass Adjustments**:
+
 ```
 Before: Prey with [characteristic] scored [SCORE]
 After:  Prey with [characteristic] now scores [NEW_SCORE]
@@ -61,6 +63,7 @@ Reason: This deceased branch showed [failure pattern]
 ```
 
 **λ (Lambda) Adjustments**:
+
 ```
 Pattern detected: [PATTERN]
 Future prey matching this: λ score +[AMOUNT]
@@ -74,6 +77,7 @@ Future prey matching this: λ score +[AMOUNT]
 **Fitness Advantage**: +[DIFFERENCE]
 
 **Why the Winner Won**:
+
 - [Reason 1]
 - [Reason 2]
 - [Reason 3]
@@ -109,10 +113,11 @@ def failed_function():
 **Could this be revived?**: [YES / NO / MAYBE]
 
 **Conditions for Revival**:
+
 - [Condition 1: e.g., "If λ-score calculation improves"]
 - [Condition 2: e.g., "If dependency conflict resolves"]
 - [Condition 3: e.g., "If use case emerges"]
 
 ---
 
-*Rest in graveyard. Nutrients integrated into Cerata's perception.*
+_Rest in graveyard. Nutrients integrated into Cerata's perception._

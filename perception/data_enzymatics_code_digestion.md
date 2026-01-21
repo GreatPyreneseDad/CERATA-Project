@@ -13,6 +13,7 @@ Cerata doesn't copy code. Cerata **metabolizes** it — breaking repositories in
 **Purpose**: Decompose files/modules into individual functional units
 
 **Process**:
+
 ```
 INPUT: /src/parser.py (300 lines, multiple functions)
 
@@ -68,6 +69,7 @@ THREAD MAP:
 **Purpose**: Identify where threads attach to Cerata's existing body
 
 **Process**:
+
 ```
 CURRENT BODY STATE: /capabilities/code_tools/
 
@@ -130,6 +132,7 @@ code_tools/
 **Purpose**: Adjust foreign code to match Cerata's style, naming, patterns
 
 **Process**:
+
 ```
 THREAD: tokenize() from prey
 
@@ -206,6 +209,7 @@ ADAPTATION SUMMARY:
 **Purpose**: Package modified threads into capability modules that can be invoked
 
 **Process**:
+
 ```
 ACCEPTED THREADS (post-modification):
 ├── tokenize(text: str) -> List[Token]

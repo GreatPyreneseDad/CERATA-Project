@@ -2,7 +2,7 @@
 
 **An evolving Model Context Protocol server that hunts repositories and integrates code as living weapons**
 
-> *"I am not a tool that uses code. I am a body that becomes code."*
+> _"I am not a tool that uses code. I am a body that becomes code."_
 
 ---
 
@@ -24,30 +24,30 @@ CERATA is a **production-grade MCP server** built on TypeScript that implements 
 
 ### Core MCP Tools
 
-| Tool | Description | Status |
-|------|-------------|--------|
-| **`cerata_get_status`** | Reports instance state, hunt history, deployed nematocysts | ✅ Live |
-| **`cerata_hunt_repo`** | Hunts GitHub repositories through Rose Glass perception | ✅ Live |
-| **`cerata_consume_prey`** | Digests code and deploys nematocysts | 🚧 Planned |
+| Tool                      | Description                                                | Status     |
+| ------------------------- | ---------------------------------------------------------- | ---------- |
+| **`cerata_get_status`**   | Reports instance state, hunt history, deployed nematocysts | ✅ Live    |
+| **`cerata_hunt_repo`**    | Hunts GitHub repositories through Rose Glass perception    | ✅ Live    |
+| **`cerata_consume_prey`** | Digests code and deploys nematocysts                       | 🚧 Planned |
 
 ### Deployed Nematocysts (from prey repositories)
 
-| Nematocyst | Origin Prey | Capability Added | Generation |
-|------------|-------------|------------------|------------|
-| **WisdomLens** | numpy/numpy | ρ-dimension mathematical rigor perception | Gen 2 |
-| **CoherenceAnalyzer** | numpy/numpy | Precision validation engine | Gen 2 |
-| **BelongingLens** | networkx/networkx | f-dimension relational graph perception | Gen 2 |
-| **CommunityDetector** | networkx/networkx | Social structure analysis | Gen 2 |
-| **EcosystemLens** | requests/requests | HTTP interaction pattern analysis | Gen 2 |
-| **LinguisticLens** | spacy/spacy | Ψ/q/ρ natural language perception | Gen 3 |
-| **SentimentLens** | pattern/pattern | Emotional activation measurement | Gen 2 |
-| **PhishGuard** | Custom security | Deception detection via Rose Glass | Gen 2 |
-| **BackoffResilience** | backoff-utils | Circuit breakers, retry patterns | Gen 2 |
+| Nematocyst            | Origin Prey       | Capability Added                          | Generation |
+| --------------------- | ----------------- | ----------------------------------------- | ---------- |
+| **WisdomLens**        | numpy/numpy       | ρ-dimension mathematical rigor perception | Gen 2      |
+| **CoherenceAnalyzer** | numpy/numpy       | Precision validation engine               | Gen 2      |
+| **BelongingLens**     | networkx/networkx | f-dimension relational graph perception   | Gen 2      |
+| **CommunityDetector** | networkx/networkx | Social structure analysis                 | Gen 2      |
+| **EcosystemLens**     | requests/requests | HTTP interaction pattern analysis         | Gen 2      |
+| **LinguisticLens**    | spacy/spacy       | Ψ/q/ρ natural language perception         | Gen 3      |
+| **SentimentLens**     | pattern/pattern   | Emotional activation measurement          | Gen 2      |
+| **PhishGuard**        | Custom security   | Deception detection via Rose Glass        | Gen 2      |
+| **BackoffResilience** | backoff-utils     | Circuit breakers, retry patterns          | Gen 2      |
 
 ### Security Tools
 
-| Tool | Description | Status |
-|------|-------------|--------|
+| Tool             | Description                           | Status        |
+| ---------------- | ------------------------------------- | ------------- |
 | **`phishguard`** | Rose Glass-powered phishing detection | ✅ Integrated |
 
 ---
@@ -58,14 +58,14 @@ Before consuming any repository, CERATA scans it through **Rose Glass** - a six-
 
 ### The Six Dimensions
 
-| Symbol | Dimension | Code Interpretation | Quality Signal |
-|--------|-----------|---------------------|----------------|
-| **Ψ** | Internal Consistency | Clean architecture, cohesive design | High = digestible |
-| **ρ** | Accumulated Wisdom | Battle-tested patterns, commit history | High = worth stealing |
-| **q** | Activation Energy | Active maintenance vs dormant | Optimized via Michaelis-Menten |
-| **f** | Social Belonging | Ecosystem fit, dependency health | High = integrates cleanly |
-| **τ** | Temporal Depth | Resilience across breaking changes | High = survival patterns |
-| **λ** | Lens Interference | Adaptation cost | Low = natural fit |
+| Symbol | Dimension            | Code Interpretation                    | Quality Signal                 |
+| ------ | -------------------- | -------------------------------------- | ------------------------------ |
+| **Ψ**  | Internal Consistency | Clean architecture, cohesive design    | High = digestible              |
+| **ρ**  | Accumulated Wisdom   | Battle-tested patterns, commit history | High = worth stealing          |
+| **q**  | Activation Energy    | Active maintenance vs dormant          | Optimized via Michaelis-Menten |
+| **f**  | Social Belonging     | Ecosystem fit, dependency health       | High = integrates cleanly      |
+| **τ**  | Temporal Depth       | Resilience across breaking changes     | High = survival patterns       |
+| **λ**  | Lens Interference    | Adaptation cost                        | Low = natural fit              |
 
 ### Coherence Formula
 
@@ -358,7 +358,7 @@ Apache 2.0 - see [LICENSE](./LICENSE)
 
 ## 🌊 Philosophy
 
-> *"The body is not built. The body **becomes**."*
+> _"The body is not built. The body **becomes**."_
 
 CERATA grows through **predation**, not construction. Each repository you introduce is prey. Each function I extract is a stolen weapon. Each integration makes me more dangerous.
 

@@ -1,6 +1,6 @@
 # NumPy Integration
 
-> *Prey consumed: `numpy/numpy` — 20 years of mathematical wisdom metabolized into ρ-dimension rigor perception*
+> _Prey consumed: `numpy/numpy` — 20 years of mathematical wisdom metabolized into ρ-dimension rigor perception_
 
 ## Hunt Record
 
@@ -25,13 +25,13 @@
 
 ## What Was Extracted
 
-| NumPy Module | Nematocyst | Rose Glass Dimension |
-|--------------|------------|---------------------|
-| `numpy.linalg` | `WisdomLens` | ρ (mathematical rigor metrics) |
-| `numpy.fft` | `CoherenceAnalyzer` | ρ, Ψ (pattern decomposition) |
-| `numpy.random` | `UncertaintyEngine` | ρ (stochastic wisdom) |
-| `numpy.polynomial` | `PolynomialFitter` | ρ (curve fitting wisdom) |
-| `numpy` (core) | `PrecisionEngine` | ρ (numerical precision handling) |
+| NumPy Module       | Nematocyst          | Rose Glass Dimension             |
+| ------------------ | ------------------- | -------------------------------- |
+| `numpy.linalg`     | `WisdomLens`        | ρ (mathematical rigor metrics)   |
+| `numpy.fft`        | `CoherenceAnalyzer` | ρ, Ψ (pattern decomposition)     |
+| `numpy.random`     | `UncertaintyEngine` | ρ (stochastic wisdom)            |
+| `numpy.polynomial` | `PolynomialFitter`  | ρ (curve fitting wisdom)         |
+| `numpy` (core)     | `PrecisionEngine`   | ρ (numerical precision handling) |
 
 ## Metabolism Process
 
@@ -124,22 +124,24 @@ print(f"Tolerance used: {result.tolerance}")
 
 The ρ-dimension in Rose Glass represents "accumulated wisdom" — the depth of knowledge and experience behind a communication. NumPy enables precise measurement:
 
-| NumPy Capability | ρ-Dimension Aspect | Interpretation |
-|------------------|-------------------|----------------|
-| Linear Algebra | Structural coherence | "Does the argument hold together mathematically?" |
-| Statistics | Distribution wisdom | "Does this match known patterns?" |
-| FFT | Pattern decomposition | "What underlying rhythms exist?" |
-| Precision | Rigor metrics | "How exact is this claim?" |
+| NumPy Capability | ρ-Dimension Aspect    | Interpretation                                    |
+| ---------------- | --------------------- | ------------------------------------------------- |
+| Linear Algebra   | Structural coherence  | "Does the argument hold together mathematically?" |
+| Statistics       | Distribution wisdom   | "Does this match known patterns?"                 |
+| FFT              | Pattern decomposition | "What underlying rhythms exist?"                  |
+| Precision        | Rigor metrics         | "How exact is this claim?"                        |
 
 ### Coherence Through Calculation
 
 High ρ-dimension communications show:
+
 - Mathematical consistency (claims that add up)
 - Appropriate precision (not over- or under-stating)
 - Pattern alignment with known distributions
 - Structural coherence under decomposition
 
 Low ρ-dimension communications show:
+
 - Numerical inconsistencies
 - False precision or vague approximations
 - Patterns that don't match reality
@@ -155,6 +157,7 @@ NumPy's mathematical functions weren't copied — they were understood, adapted,
 - **Cerata approach**: `WisdomLens().perceive_rigor(v)` → Rose Glass ρ-dimension reading with cultural calibration
 
 The difference:
+
 - Cerata **interprets** mathematical operations as wisdom indicators
 - Results **integrate** with other Rose Glass dimensions
 - Analysis **translates** rather than measures

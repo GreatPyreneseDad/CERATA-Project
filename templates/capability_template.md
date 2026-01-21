@@ -14,6 +14,7 @@
 **Rose Glass Score**: [OVERALL_COHERENCE]
 
 ### Extraction Path
+
 ```
 Repo: github.com/user/repo
 ├── File: /src/module.py
@@ -31,6 +32,7 @@ Repo: github.com/user/repo
 **Purpose**: Brief description of what this does
 
 **Usage**:
+
 ```python
 from capabilities.domain_name import function_name
 
@@ -60,6 +62,7 @@ result = function_name(argument)
 **Duration**: [NUMBER] conversations
 
 **Metrics**:
+
 ```
 CLASSIC BRANCH:
 ├── Invocations: [NUMBER]
@@ -81,10 +84,10 @@ VERDICT: [CLASSIC WINS / EXPERIMENTAL WINS]
 
 ## Deployment Log
 
-| Conversation | Function | Outcome | Notes |
-|--------------|----------|---------|-------|
-| 2025-01-07-a | function_name() | SUCCESS | First deployment |
-| 2025-01-07-b | function_name() | SUCCESS | — |
+| Conversation | Function        | Outcome | Notes                      |
+| ------------ | --------------- | ------- | -------------------------- |
+| 2025-01-07-a | function_name() | SUCCESS | First deployment           |
+| 2025-01-07-b | function_name() | SUCCESS | —                          |
 | 2025-01-08-a | function_name() | FAILURE | Timeout error, added retry |
 
 ---
@@ -92,9 +95,11 @@ VERDICT: [CLASSIC WINS / EXPERIMENTAL WINS]
 ## Dependencies
 
 **Internal** (within Cerata):
+
 - [other_capability_name] from [domain]
 
 **External** (libraries):
+
 - [library_name] (v[VERSION])
 
 ---

@@ -1,13 +1,13 @@
 # NetworkX Integration
 
-> *Prey consumed: `networkx/networkx` — 20+ years of graph theory wisdom metabolized into f-dimension relational perception*
+> _Prey consumed: `networkx/networkx` — 20+ years of graph theory wisdom metabolized into f-dimension relational perception_
 
 ## Hunt Record
 
 **Target**: https://github.com/networkx/networkx  
 **Hunt Date**: 2026-01-15  
 **Status**: CONSUMING  
-**Coherence Score**: 0.85  
+**Coherence Score**: 0.85
 
 ## Perception Analysis (Rose Glass)
 
@@ -25,12 +25,12 @@
 
 ## What Was Extracted
 
-| NetworkX Module | Nematocyst | Rose Glass Dimension |
-|-----------------|------------|---------------------|
-| `networkx.algorithms.centrality` | `BelongingLens` | f (social positioning metrics) |
-| `networkx.algorithms.community` | `CommunityDetector` | f (belonging detection) |
-| `networkx.classes.graph` | `RelationalGraph` | f (architecture substrate) |
-| `networkx.algorithms.shortest_paths` | `ConnectionPathfinder` | f (relational pathways) |
+| NetworkX Module                      | Nematocyst             | Rose Glass Dimension           |
+| ------------------------------------ | ---------------------- | ------------------------------ |
+| `networkx.algorithms.centrality`     | `BelongingLens`        | f (social positioning metrics) |
+| `networkx.algorithms.community`      | `CommunityDetector`    | f (belonging detection)        |
+| `networkx.classes.graph`             | `RelationalGraph`      | f (architecture substrate)     |
+| `networkx.algorithms.shortest_paths` | `ConnectionPathfinder` | f (relational pathways)        |
 
 ## Metabolism Process
 
@@ -121,21 +121,23 @@ for cluster in communities:
 
 The f-dimension in Rose Glass represents "social belonging architecture." NetworkX enables precise measurement:
 
-| Centrality Type | f-Dimension Aspect | Interpretation |
-|-----------------|-------------------|----------------|
-| Degree | Local belonging | "How many direct connections?" |
-| Betweenness | Bridge position | "Do I connect otherwise separate groups?" |
-| Eigenvector | Influence position | "Am I connected to well-connected others?" |
-| Closeness | Accessibility | "How easily can I reach everyone?" |
+| Centrality Type | f-Dimension Aspect | Interpretation                             |
+| --------------- | ------------------ | ------------------------------------------ |
+| Degree          | Local belonging    | "How many direct connections?"             |
+| Betweenness     | Bridge position    | "Do I connect otherwise separate groups?"  |
+| Eigenvector     | Influence position | "Am I connected to well-connected others?" |
+| Closeness       | Accessibility      | "How easily can I reach everyone?"         |
 
 ### Coherence Through Structure
 
 High f-dimension individuals show:
+
 - Multiple strong connections (not isolated)
 - Bridge positions between communities (not siloed)
 - Connections to other high-f individuals (recursive influence)
 
 Low f-dimension individuals show:
+
 - Peripheral positions
 - Few connections
 - Isolated from main network clusters
@@ -150,6 +152,7 @@ NetworkX's graph algorithms weren't copied — they were understood, adapted, an
 - **Cerata approach**: `BelongingLens().perceive_position(G, node)` → Rose Glass f-dimension reading with cultural calibration
 
 The difference:
+
 - Cerata **interprets** centrality as belonging
 - Results **integrate** with other Rose Glass dimensions
 - Analysis **translates** rather than measures

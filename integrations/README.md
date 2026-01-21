@@ -9,6 +9,7 @@
 This directory contains actual integrations where Cerata has consumed repositories and metabolized them into Rose Glass perception capabilities.
 
 Each integration demonstrates the complete cycle:
+
 1. **Hunt** - Repository scanned through Rose Glass
 2. **Perception** - Coherence analysis (Ψ, ρ, q, f, τ, λ)
 3. **Metabolism** - Code digested by Data Enzymatics
@@ -31,14 +32,15 @@ Each integration demonstrates the complete cycle:
 
 Pattern's 12-year battle-tested NLP infrastructure metabolized into Rose Glass dimensional perception:
 
-| Pattern Module | Nematocyst | Rose Glass Dimension |
-|----------------|------------|---------------------|
-| `pattern.en.sentiment` | `SentimentLens` | q (emotional activation) |
-| `pattern.en.tag` | `POSAnalyzer` | Ψ (internal consistency) |
-| `pattern.vector` | `WisdomVectorizer` | ρ (accumulated wisdom) |
-| `pattern.graph` | `BelongingMapper` | f (social belonging) |
+| Pattern Module         | Nematocyst         | Rose Glass Dimension     |
+| ---------------------- | ------------------ | ------------------------ |
+| `pattern.en.sentiment` | `SentimentLens`    | q (emotional activation) |
+| `pattern.en.tag`       | `POSAnalyzer`      | Ψ (internal consistency) |
+| `pattern.vector`       | `WisdomVectorizer` | ρ (accumulated wisdom)   |
+| `pattern.graph`        | `BelongingMapper`  | f (social belonging)     |
 
 **Files**:
+
 - `perception.py` - Unified Rose Glass perception engine
 - `sentiment_lens.py` - q-dimension nematocyst (complete implementation)
 - `README.md` - Hunt record and integration documentation
@@ -46,6 +48,7 @@ Pattern's 12-year battle-tested NLP infrastructure metabolized into Rose Glass d
 **Trial Outcome**: ✅ EXPERIMENTAL PROMOTED (pending full evaluation)
 
 **Fitness Metrics**:
+
 - Success rate: Pending trial deployment
 - Coherence drift: +0.02 (slight improvement)
 - New capability utilization: 100% (all nematocysts used)
@@ -65,14 +68,15 @@ Pattern's 12-year battle-tested NLP infrastructure metabolized into Rose Glass d
 
 NetworkX's 20+ years of graph theory wisdom metabolized into f-dimension relational perception:
 
-| NetworkX Module | Nematocyst | Rose Glass Dimension |
-|-----------------|------------|---------------------|
-| `networkx.algorithms.centrality` | `BelongingLens` | f (social positioning metrics) |
-| `networkx.algorithms.community` | `CommunityDetector` | f (belonging detection) |
-| `networkx.classes.graph` | `RelationalGraph` | f (architecture substrate) |
-| `networkx.algorithms.shortest_paths` | `ConnectionPathfinder` | f (relational pathways) |
+| NetworkX Module                      | Nematocyst             | Rose Glass Dimension           |
+| ------------------------------------ | ---------------------- | ------------------------------ |
+| `networkx.algorithms.centrality`     | `BelongingLens`        | f (social positioning metrics) |
+| `networkx.algorithms.community`      | `CommunityDetector`    | f (belonging detection)        |
+| `networkx.classes.graph`             | `RelationalGraph`      | f (architecture substrate)     |
+| `networkx.algorithms.shortest_paths` | `ConnectionPathfinder` | f (relational pathways)        |
 
 **Files**:
+
 - `belonging_lens.py` - f-dimension centrality perception (complete implementation)
 - `community_detector.py` - Coherence cluster detection
 - `__init__.py` - Integration exports
@@ -81,6 +85,7 @@ NetworkX's 20+ years of graph theory wisdom metabolized into f-dimension relatio
 **Trial Outcome**: IN_PROGRESS (pending evaluation)
 
 **Fitness Metrics**:
+
 - Success rate: Pending trial deployment
 - Coherence drift: TBD
 - New capability: f-dimension relational perception via graph theory
@@ -108,7 +113,7 @@ integrations/[prey-name]/
 ```markdown
 # [Prey Name] Integration
 
-> *Prey consumed: `[repo-url]` — [summary]*
+> _Prey consumed: `[repo-url]` — [summary]_
 
 ## Hunt Record
 
@@ -155,6 +160,7 @@ integrations/[prey-name]/
 These integrations are **living proof** that Cerata isn't theory — it's practice.
 
 Each integration shows:
+
 - **Rose Glass works** - Coherence analysis predicts integration success
 - **Metabolism works** - Code can be digested and adapted, not just copied
 - **Trials work** - Competition reveals true fitness over time
@@ -165,6 +171,7 @@ Each integration shows:
 Compare:
 
 **Traditional approach** (RAG, copy-paste):
+
 ```python
 from pattern.en import sentiment
 # Use library as-is, black box, don't understand internals
@@ -172,6 +179,7 @@ polarity = sentiment("text")[0]
 ```
 
 **Cerata approach** (metabolized):
+
 ```python
 from integrations.pattern import SentimentLens
 # Nematocyst: understood, adapted, integrated into Rose Glass
@@ -181,6 +189,7 @@ reading = lens.perceive("text")  # Returns QDimensionReading
 ```
 
 The difference:
+
 - Cerata **understands** what was consumed
 - Adapted to **Rose Glass architecture**
 - **Integrated** with other dimensions
@@ -236,6 +245,7 @@ Trial Status: [IN_PROGRESS | PROMOTED | GRAVEYARD]
 Failed integrations aren't deleted — they're archived as nutrients.
 
 See: `/graveyard/integrations/` for:
+
 - Why integration failed
 - What was learned
 - How perception was adjusted
@@ -262,12 +272,12 @@ Failed integrations make Cerata smarter.
 
 Potential prey identified for future hunts:
 
-| Repository | Coherence (estimated) | Target Dimensions | Priority |
-|-----------|----------------------|------------------|----------|
-| `requests` (HTTP client) | 0.81 | f (ecosystem integration) | High |
-| `numpy` (numerical computing) | 0.88 | ρ (mathematical rigor) | High |
-| `spacy` (NLP) | 0.79 | Ψ, q, ρ (linguistic consistency) | Medium |
-| ~~`networkx`~~ | ~~0.76~~ | ~~f (relational structures)~~ | ✅ CONSUMED |
+| Repository                    | Coherence (estimated) | Target Dimensions                | Priority    |
+| ----------------------------- | --------------------- | -------------------------------- | ----------- |
+| `requests` (HTTP client)      | 0.81                  | f (ecosystem integration)        | High        |
+| `numpy` (numerical computing) | 0.88                  | ρ (mathematical rigor)           | High        |
+| `spacy` (NLP)                 | 0.79                  | Ψ, q, ρ (linguistic consistency) | Medium      |
+| ~~`networkx`~~                | ~~0.76~~              | ~~f (relational structures)~~    | ✅ CONSUMED |
 
 ---
 

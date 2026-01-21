@@ -8,64 +8,69 @@
 ## Active Capabilities
 
 ### f-Dimension (Social Belonging)
-| Nematocyst | Source | Status | Lines |
-|------------|--------|--------|-------|
-| `BelongingLens` | networkx | ✅ ACTIVE | 477 |
-| `CommunityDetector` | networkx | ✅ ACTIVE | 326 |
+
+| Nematocyst             | Source   | Status    | Lines    |
+| ---------------------- | -------- | --------- | -------- |
+| `BelongingLens`        | networkx | ✅ ACTIVE | 477      |
+| `CommunityDetector`    | networkx | ✅ ACTIVE | 326      |
 | `ConnectionPathfinder` | networkx | ✅ ACTIVE | included |
-| `RelationalGraph` | networkx | ✅ ACTIVE | included |
+| `RelationalGraph`      | networkx | ✅ ACTIVE | included |
 
 ### q-Dimension (Emotional Activation)
-| Nematocyst | Source | Status | Lines |
-|------------|--------|--------|-------|
-| `SentimentLens` | pattern | ✅ ACTIVE | ~200 |
+
+| Nematocyst      | Source  | Status    | Lines |
+| --------------- | ------- | --------- | ----- |
+| `SentimentLens` | pattern | ✅ ACTIVE | ~200  |
 
 ### Ψ-Dimension (Internal Consistency)
-| Nematocyst | Source | Status | Lines |
-|------------|--------|--------|-------|
-| `POSAnalyzer` | pattern | 🔄 PLANNED | - |
+
+| Nematocyst    | Source  | Status     | Lines |
+| ------------- | ------- | ---------- | ----- |
+| `POSAnalyzer` | pattern | 🔄 PLANNED | -     |
 
 ### ρ-Dimension (Accumulated Wisdom)
-| Nematocyst | Source | Status | Lines |
-|------------|--------|--------|-------|
-| `WisdomLens` | numpy | ✅ ACTIVE | ~350 |
-| `CoherenceAnalyzer` | numpy | ✅ ACTIVE | ~280 |
-| `PrecisionEngine` | numpy | ✅ ACTIVE | ~220 |
+
+| Nematocyst          | Source | Status    | Lines |
+| ------------------- | ------ | --------- | ----- |
+| `WisdomLens`        | numpy  | ✅ ACTIVE | ~350  |
+| `CoherenceAnalyzer` | numpy  | ✅ ACTIVE | ~280  |
+| `PrecisionEngine`   | numpy  | ✅ ACTIVE | ~220  |
 
 ### Infrastructure
-| Nematocyst | Source | Status | Lines |
-|------------|--------|--------|-------|
-| `ExponentialBackoff` | backoff-resilience | ✅ ACTIVE | ~150 |
-| `CircuitBreaker` | backoff-resilience | ✅ ACTIVE | ~100 |
-| `RateLimiter` | backoff-resilience | ✅ ACTIVE | ~80 |
+
+| Nematocyst           | Source             | Status    | Lines |
+| -------------------- | ------------------ | --------- | ----- |
+| `ExponentialBackoff` | backoff-resilience | ✅ ACTIVE | ~150  |
+| `CircuitBreaker`     | backoff-resilience | ✅ ACTIVE | ~100  |
+| `RateLimiter`        | backoff-resilience | ✅ ACTIVE | ~80   |
 
 ---
 
 ## Active Trials
 
-| Integration | Branch | Status | Start Date |
-|-------------|--------|--------|------------|
-| networkx | main | IN_PROGRESS | 2026-01-15 |
-| pattern | main | IN_PROGRESS | 2026-01-15 |
-| backoff-resilience | main | IN_PROGRESS | 2026-01-15 |
-| numpy | main | IN_PROGRESS | 2026-01-15 |
+| Integration        | Branch | Status      | Start Date |
+| ------------------ | ------ | ----------- | ---------- |
+| networkx           | main   | IN_PROGRESS | 2026-01-15 |
+| pattern            | main   | IN_PROGRESS | 2026-01-15 |
+| backoff-resilience | main   | IN_PROGRESS | 2026-01-15 |
+| numpy              | main   | IN_PROGRESS | 2026-01-15 |
 
 ---
 
 ## Hunt History
 
-| # | Prey | Coherence | Date | Outcome |
-|---|------|-----------|------|---------|
-| 1 | clips/pattern | 0.82 | 2026-01-15 | ✅ CONSUMED |
-| 2 | litl/backoff | 0.78 | 2026-01-15 | ✅ CONSUMED |
-| 3 | networkx/networkx | 0.85 | 2026-01-15 | ✅ CONSUMED |
-| 4 | numpy/numpy | 0.88 | 2026-01-15 | ✅ CONSUMED |
+| #   | Prey              | Coherence | Date       | Outcome     |
+| --- | ----------------- | --------- | ---------- | ----------- |
+| 1   | clips/pattern     | 0.82      | 2026-01-15 | ✅ CONSUMED |
+| 2   | litl/backoff      | 0.78      | 2026-01-15 | ✅ CONSUMED |
+| 3   | networkx/networkx | 0.85      | 2026-01-15 | ✅ CONSUMED |
+| 4   | numpy/numpy       | 0.88      | 2026-01-15 | ✅ CONSUMED |
 
 ---
 
 ## Graveyard
 
-*No deceased branches yet. All integrations thriving.*
+_No deceased branches yet. All integrations thriving._
 
 ---
 
@@ -97,11 +102,11 @@ f (Belonging)   ████████░░ 80%  (NetworkX integration comple
 
 ## Next Hunts (Priority Queue)
 
-| Priority | Target | Est. Coherence | Target Dimension |
-|----------|--------|----------------|------------------|
-| HIGH | requests | 0.81 | f (ecosystem integration) |
-| MEDIUM | spacy | 0.79 | Ψ, q, ρ (linguistic) |
-| LOW | scipy | 0.85 | ρ, τ (scientific computing) |
+| Priority | Target   | Est. Coherence | Target Dimension            |
+| -------- | -------- | -------------- | --------------------------- |
+| HIGH     | requests | 0.81           | f (ecosystem integration)   |
+| MEDIUM   | spacy    | 0.79           | Ψ, q, ρ (linguistic)        |
+| LOW      | scipy    | 0.85           | ρ, τ (scientific computing) |
 
 ---
 
@@ -112,4 +117,4 @@ f (Belonging)   ████████░░ 80%  (NetworkX integration comple
 
 ---
 
-*The body grows through predation. Each integration is a generation.*
+_The body grows through predation. Each integration is a generation._

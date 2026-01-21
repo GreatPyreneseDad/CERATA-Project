@@ -48,7 +48,7 @@ When you authorize consumption with **"Consume [files]"**, Cerata:
 ### 1. Creates Classic Branch
 
 ```markdown
-# /forest/classic_[domain]_gen[N].md
+# /forest/classic\_[domain]\_gen[N].md
 
 **Branch**: CLASSIC
 **Domain**: [domain_name]
@@ -72,7 +72,7 @@ When you authorize consumption with **"Consume [files]"**, Cerata:
 ### 2. Creates Experimental Branch
 
 ```markdown
-# /forest/experimental_[domain]_gen[N+1].md
+# /forest/experimental\_[domain]\_gen[N+1].md
 
 **Branch**: EXPERIMENTAL
 **Domain**: [domain_name]
@@ -152,20 +152,20 @@ User sees identical interface. Cerata tracks which branch was used.
 ```markdown
 ## Deployment Log (Classic Branch)
 
-| Conversation | Function | Outcome | Error | Notes |
-|--------------|----------|---------|-------|-------|
-| 2025-01-07-a | parse_code() | SUCCESS | — | — |
+| Conversation | Function     | Outcome | Error     | Notes                 |
+| ------------ | ------------ | ------- | --------- | --------------------- |
+| 2025-01-07-a | parse_code() | SUCCESS | —         | —                     |
 | 2025-01-07-c | parse_code() | FAILURE | TypeError | Unexpected AST format |
 ```
 
 ```markdown
 ## Deployment Log (Experimental Branch)
 
-| Conversation | Function | Outcome | Error | Notes |
-|--------------|----------|---------|-------|-------|
-| 2025-01-07-b | parse_code() | SUCCESS | — | Used new parser nematocyst |
-| 2025-01-07-d | tokenize() | SUCCESS | — | NEW CAPABILITY (only in experimental) |
-| 2025-01-07-e | parse_code() | SUCCESS | — | with_retry() prevented timeout |
+| Conversation | Function     | Outcome | Error | Notes                                 |
+| ------------ | ------------ | ------- | ----- | ------------------------------------- |
+| 2025-01-07-b | parse_code() | SUCCESS | —     | Used new parser nematocyst            |
+| 2025-01-07-d | tokenize()   | SUCCESS | —     | NEW CAPABILITY (only in experimental) |
+| 2025-01-07-e | parse_code() | SUCCESS | —     | with_retry() prevented timeout        |
 ```
 
 ---

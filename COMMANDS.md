@@ -11,11 +11,13 @@
 **Purpose**: Initiate perception cycle on a repository
 
 **Usage**:
+
 ```
 Hunt github.com/psf/requests
 ```
 
 **What Cerata Does**:
+
 1. Clones/fetches repository metadata
 2. Runs Rose Glass analysis (Ψ, ρ, q, f, τ, λ)
 3. Identifies potential nematocysts
@@ -23,6 +25,7 @@ Hunt github.com/psf/requests
 5. Presents viability report
 
 **Example Response**:
+
 ```
 SCANNING: github.com/psf/requests
 
@@ -55,6 +58,7 @@ Authorize hunt? Specify nematocysts to extract.
 **Purpose**: Authorize metabolism of selected components
 
 **Usage**:
+
 ```
 Consume adapters.py and auth.py
 ```
@@ -66,6 +70,7 @@ Consume HTTPAdapter from adapters.py and BasicAuth from auth.py
 ```
 
 **What Cerata Does**:
+
 1. Extracts specified components
 2. Breaks into functional threads (DIGESTERS)
 3. Identifies integration points (CONNECTORS)
@@ -75,6 +80,7 @@ Consume HTTPAdapter from adapters.py and BasicAuth from auth.py
 7. Initiates trial
 
 **Example Response**:
+
 ```
 INGESTING: adapters.py, auth.py
 
@@ -105,11 +111,13 @@ Both branches active. Trial begins now.
 **Purpose**: Compare classic vs experimental branches, declare winner
 
 **Usage**:
+
 ```
 Evaluate api_tools
 ```
 
 **What Cerata Does**:
+
 1. Aggregates deployment logs from both branches
 2. Calculates fitness scores
 3. Analyzes error patterns
@@ -120,6 +128,7 @@ Evaluate api_tools
 8. Extracts nutrients to graveyard
 
 **Example Response**:
+
 ```
 TRIAL EVALUATION: api_tools
 
@@ -157,6 +166,7 @@ Cerata has grown.
 **Purpose**: Explicitly invoke a nematocyst (bypasses random selection during trials)
 
 **Usage**:
+
 ```
 Deploy with_retry for this API call
 ```
@@ -168,6 +178,7 @@ Deploy experimental branch of api_tools
 ```
 
 **What Cerata Does**:
+
 - Forces use of specified capability
 - Logs deployment explicitly
 - Useful for testing specific nematocysts
@@ -179,6 +190,7 @@ Deploy experimental branch of api_tools
 **Purpose**: Show current body state
 
 **Usage**:
+
 ```
 Status
 ```
@@ -187,6 +199,7 @@ Status
 Displays `/capabilities/manifest.md` content
 
 **Example Response**:
+
 ```
 CERATA BODY STATE
 
@@ -219,6 +232,7 @@ STATISTICS:
 **Purpose**: Show deceased branches and extracted nutrients
 
 **Usage**:
+
 ```
 Graveyard
 ```
@@ -233,6 +247,7 @@ Graveyard [specific entry]
 Lists all graveyard entries with cause of death and lessons learned
 
 **Example Response**:
+
 ```
 CERATA GRAVEYARD
 
@@ -270,6 +285,7 @@ View specific entry: "Graveyard code_tools v2"
 **Purpose**: Apply Rose Glass to non-code (design patterns, architectures, ideas)
 
 **Usage**:
+
 ```
 Perceive microservices architecture
 ```
@@ -284,6 +300,7 @@ Perceive the idea of caching user sessions in Redis
 Analyzes concept through Rose Glass dimensions without hunting
 
 **Example Response**:
+
 ```
 PERCEIVING: microservices architecture
 
@@ -330,17 +347,20 @@ Avoid if: Small team, unclear boundaries, premature optimization.
 **Purpose**: Remove an entire capability domain, digest to substrate
 
 **Usage**:
+
 ```
 Autophagy api_tools
 ```
 
 **What Cerata Does**:
+
 1. Removes domain from active capabilities
 2. Digests nematocysts to base substrate
 3. Records why (self-pruning for coherence)
 4. Updates generation counter
 
 **Example Response**:
+
 ```
 AUTOPHAGY INITIATED: api_tools
 

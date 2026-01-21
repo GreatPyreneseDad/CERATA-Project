@@ -6,19 +6,20 @@
 
 ## Hunt Summary
 
-| Field | Value |
-|-------|-------|
-| Hunt ID | `resilience-2025-01` |
-| Target Count | 3 repositories |
-| Combined Coherence | 0.82 (PRIME) |
-| Nematocysts Extracted | 8 |
-| Status | **COMPLETE** |
+| Field                 | Value                |
+| --------------------- | -------------------- |
+| Hunt ID               | `resilience-2025-01` |
+| Target Count          | 3 repositories       |
+| Combined Coherence    | 0.82 (PRIME)         |
+| Nematocysts Extracted | 8                    |
+| Status                | **COMPLETE**         |
 
 ---
 
 ## Prey Manifest
 
 ### 1. litl/backoff
+
 ```yaml
 url: github.com/litl/backoff
 coherence: 0.87
@@ -31,6 +32,7 @@ threat_level: GREEN
 ```
 
 ### 2. fabfuel/circuitbreaker
+
 ```yaml
 url: github.com/fabfuel/circuitbreaker
 coherence: 0.81
@@ -42,6 +44,7 @@ threat_level: GREEN
 ```
 
 ### 3. alexdelorenzo/limiter
+
 ```yaml
 url: github.com/alexdelorenzo/limiter
 coherence: 0.78
@@ -72,23 +75,25 @@ integrations/backoff-resilience/
 
 Each nematocyst enhanced with dimensional tracking:
 
-| Dimension | Application |
-|-----------|-------------|
-| Ψ (Psi) | Coherence state in circuit breaker, bucket fill levels |
-| τ (Tau) | Recovery timeout depth, temporal backoff patterns |
-| ρ (Rho) | Success/failure wisdom accumulation |
-| λ (Lambda) | Jitter for reducing retry interference |
+| Dimension  | Application                                            |
+| ---------- | ------------------------------------------------------ |
+| Ψ (Psi)    | Coherence state in circuit breaker, bucket fill levels |
+| τ (Tau)    | Recovery timeout depth, temporal backoff patterns      |
+| ρ (Rho)    | Success/failure wisdom accumulation                    |
+| λ (Lambda) | Jitter for reducing retry interference                 |
 
 ---
 
 ## Integration Points
 
 ### Deploy to capabilities/
+
 ```bash
 cp -r integrations/backoff-resilience capabilities/resilience_tools
 ```
 
 ### Usage Example
+
 ```python
 from capabilities.resilience_tools import (
     on_exception, expo, circuit_breaker, rate_limit
@@ -125,7 +130,7 @@ metrics:
   - error_recovery_rate
   - coherence_maintenance
   - resource_efficiency
-evaluation_command: "Evaluate resilience_tools"
+evaluation_command: 'Evaluate resilience_tools'
 ```
 
 ---
@@ -135,6 +140,7 @@ evaluation_command: "Evaluate resilience_tools"
 ### To Complete Integration:
 
 1. **Copy to capabilities**:
+
    ```bash
    cp -r integrations/backoff-resilience capabilities/resilience_tools
    ```
@@ -177,6 +183,6 @@ assert result.allowed == True
 
 **Generation**: N → N+1  
 **Nematocyst Count**: +8  
-**New Domain**: resilience_tools (v1)  
+**New Domain**: resilience_tools (v1)
 
-*Cerata has grown.*
+_Cerata has grown._

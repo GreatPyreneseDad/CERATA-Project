@@ -15,6 +15,10 @@ import { asyncCountdownTaskTool } from './template-async-countdown.task-tool.js'
 // CERATA tools
 import { cerataGetStatusTool } from './cerata-get-status.tool.js';
 import { cerataHuntRepoTool } from './cerata-hunt-repo.tool.js';
+// CERATA nematocysts
+import { wisdomLensToolDefinition } from './cerata-wisdom-lens.tool.js';
+import { belongingLensToolDefinition } from './cerata-belonging-lens.tool.js';
+import { linguisticLensToolDefinition } from './cerata-linguistic-lens.tool.js';
 
 /**
  * An array containing all tool definitions for easy iteration.
@@ -32,4 +36,8 @@ export const allToolDefinitions = [
   // CERATA tools
   cerataGetStatusTool,
   cerataHuntRepoTool,
+  // CERATA nematocysts (metabolized prey capabilities)
+  wisdomLensToolDefinition,
+  belongingLensToolDefinition,
+  linguisticLensToolDefinition,
 ];

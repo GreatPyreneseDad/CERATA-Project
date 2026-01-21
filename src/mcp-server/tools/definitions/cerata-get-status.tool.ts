@@ -197,7 +197,7 @@ async function getStatusLogic(
     await storage.get('healthcheck', context);
     // Get provider type from config
     const { AppConfig } = await import('@/container/tokens.js');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     const config = container.resolve(AppConfig);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     providerType = config.storage.providerType as string;

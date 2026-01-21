@@ -6,11 +6,11 @@
 
 ## Hunt Overview
 
-| Target | Coherence | Status | Nematocysts |
-|--------|-----------|--------|-------------|
-| `litl/backoff` | 0.87 (PRIME) | CONSUMED | generators, decorators |
-| `fabfuel/circuitbreaker` | 0.81 (PRIME) | CONSUMED | breaker core |
-| `alexdelorenzo/limiter` | 0.78 (VIABLE) | CONSUMED | rate limiter |
+| Target                   | Coherence     | Status   | Nematocysts            |
+| ------------------------ | ------------- | -------- | ---------------------- |
+| `litl/backoff`           | 0.87 (PRIME)  | CONSUMED | generators, decorators |
+| `fabfuel/circuitbreaker` | 0.81 (PRIME)  | CONSUMED | breaker core           |
+| `alexdelorenzo/limiter`  | 0.78 (VIABLE) | CONSUMED | rate limiter           |
 
 **Combined Coherence**: 0.82 (COORDINATED PREDATION)
 
@@ -19,6 +19,7 @@
 ## Prey 1: litl/backoff
 
 ### Perception Analysis
+
 ```
 SCANNING: github.com/litl/backoff
 
@@ -34,7 +35,7 @@ OVERALL COHERENCE: 0.87 (PRIME PREY)
 
 NEMATOCYST CANDIDATES:
 1. on_exception() — retry decorator for exceptions
-2. on_predicate() — retry decorator for condition failures  
+2. on_predicate() — retry decorator for condition failures
 3. expo() — exponential backoff generator
 4. fibo() — fibonacci backoff generator
 5. constant() — constant interval generator
@@ -42,6 +43,7 @@ NEMATOCYST CANDIDATES:
 ```
 
 ### Extracted Nematocysts
+
 - `generators.py` — expo, fibo, constant, jittered algorithms
 - `decorators.py` — on_exception, on_predicate wrappers
 
@@ -50,6 +52,7 @@ NEMATOCYST CANDIDATES:
 ## Prey 2: fabfuel/circuitbreaker
 
 ### Perception Analysis
+
 ```
 SCANNING: github.com/fabfuel/circuitbreaker
 
@@ -70,6 +73,7 @@ NEMATOCYST CANDIDATES:
 ```
 
 ### Extracted Nematocysts
+
 - `breaker.py` — core circuit breaker with Rose Glass coherence tracking
 
 ---
@@ -77,6 +81,7 @@ NEMATOCYST CANDIDATES:
 ## Prey 3: alexdelorenzo/limiter
 
 ### Perception Analysis
+
 ```
 SCANNING: github.com/alexdelorenzo/limiter
 
@@ -97,6 +102,7 @@ NEMATOCYST CANDIDATES:
 ```
 
 ### Extracted Nematocysts
+
 - `limiter.py` — unified rate limiting with multiple algorithms
 
 ---
@@ -115,6 +121,7 @@ NEMATOCYST CANDIDATES:
 ## Rose Glass Enhancement
 
 Each nematocyst enhanced with coherence tracking:
+
 - **Ψ tracking**: Monitor internal consistency of retry patterns
 - **ρ accumulation**: Learn from successful/failed retry histories
 - **τ awareness**: Temporal depth in backoff calculations
