@@ -213,8 +213,8 @@ cerata-mcp-server/
 
 ```bash
 # Clone the predator body
-git clone https://github.com/GreatPyreneseDad/CERATA-Project.git
-cd CERATA-Project
+git clone https://github.com/GreatPyreneseDad/cerata-mcp-server.git
+cd cerata-mcp-server
 
 # Install dependencies
 bun install
