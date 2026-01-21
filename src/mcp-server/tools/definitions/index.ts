@@ -12,6 +12,9 @@ import { imageTestTool } from './template-image-test.tool.js';
 import { madlibsElicitationTool } from './template-madlibs-elicitation.tool.js';
 // Task tools (experimental)
 import { asyncCountdownTaskTool } from './template-async-countdown.task-tool.js';
+// CERATA tools
+import { cerataGetStatusTool } from './cerata-get-status.tool.js';
+import { cerataHuntRepoTool } from './cerata-hunt-repo.tool.js';
 
 /**
  * An array containing all tool definitions for easy iteration.
@@ -26,4 +29,7 @@ export const allToolDefinitions = [
   madlibsElicitationTool,
   // Task tools (experimental)
   asyncCountdownTaskTool,
+  // CERATA tools
+  cerataGetStatusTool,
+  cerataHuntRepoTool,
 ];

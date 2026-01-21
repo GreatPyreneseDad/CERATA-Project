@@ -21,3 +21,4 @@ export const SurrealdbClient = Symbol('SurrealdbClient');
 export const SpeechService = Symbol('SpeechService');
 export const GraphService = Symbol('GraphService');
 export const TaskManagerToken = Symbol('TaskManager');
+export const RoseGlassService = Symbol('RoseGlassService');

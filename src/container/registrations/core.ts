@@ -16,6 +16,7 @@ import {
   LlmProvider,
   Logger,
   RateLimiterService,
+  RoseGlassService,
   SpeechService,
   StorageProvider,
   StorageService,
@@ -26,6 +27,7 @@ import { GraphService as GraphServiceClass } from '@/services/graph/core/GraphSe
 import { SurrealGraphProvider } from '@/services/graph/providers/surrealGraph.provider.js';
 import type { ILlmProvider } from '@/services/llm/core/ILlmProvider.js';
 import { OpenRouterProvider } from '@/services/llm/providers/openrouter.provider.js';
+import { RoseGlassService as RoseGlassServiceClass } from '@/services/rose-glass/rose-glass.service.js';
 import { SpeechService as SpeechServiceClass } from '@/services/speech/index.js';
 import { StorageService as StorageServiceClass } from '@/storage/core/StorageService.js';
 import { createStorageProvider } from '@/storage/core/storageFactory.js';
@@ -196,6 +198,13 @@ export const registerCoreServices = () => {
       return new GraphServiceClass(graphProvider);
     },
   });
+
+  // Register RoseGlassService as singleton
+  container.register<RoseGlassServiceClass>(
+    RoseGlassService,
+    { useClass: RoseGlassServiceClass },
+    { lifecycle: Lifecycle.Singleton },
+  );
 
   logger.info('Core services registered with the DI container.');
 };
