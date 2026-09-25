@@ -39,6 +39,11 @@
 | `CircuitBreaker` | backoff-resilience | ✅ ACTIVE | ~100 |
 | `RateLimiter` | backoff-resilience | ✅ ACTIVE | ~80 |
 
+### Security (f-Dimension Ownership)
+| Nematocyst | Source | Status | Lines |
+|------------|--------|--------|-------|
+| `DomainLens` | tldextract | 🧪 TRIAL (PhishGuard experimental) | 305 |
+
 ---
 
 ## Active Trials
@@ -49,6 +54,7 @@
 | pattern | main | IN_PROGRESS | 2026-01-15 |
 | backoff-resilience | main | IN_PROGRESS | 2026-01-15 |
 | numpy | main | IN_PROGRESS | 2026-01-15 |
+| tldextract → phishguard | classic Gen 3 / experimental Gen 4 | IN_PROGRESS | 2026-09-25 |
 
 ---
 
@@ -60,6 +66,8 @@
 | 2 | litl/backoff | 0.78 | 2026-01-15 | ✅ CONSUMED |
 | 3 | networkx/networkx | 0.85 | 2026-01-15 | ✅ CONSUMED |
 | 4 | numpy/numpy | 0.88 | 2026-01-15 | ✅ CONSUMED |
+| 5 | john-kurkowski/tldextract | 3.142 (hunt.py 0–4 scale) | 2026-09-25 | ✅ CONSUMED (trial) |
+| 6 | ishepard/pydriller | 3.042 (hunt.py 0–4 scale) | 2026-09-25 | 🔍 HUNTED (not consumed) |
 
 ---
 
@@ -71,12 +79,12 @@
 
 ## Statistics
 
-- **Total Hunts**: 4
-- **Successful Integrations**: 4
+- **Total Hunts**: 6
+- **Successful Integrations**: 5
 - **Failed Integrations**: 0
-- **Nematocyst Count**: 12
+- **Nematocyst Count**: 13
 - **Graveyard Entries**: 0
-- **Hunt Success Rate**: 100%
+- **Hunt Success Rate**: 100% (of consumed prey)
 - **Average Trial Duration**: IN_PROGRESS
 - **Average Coherence**: 0.83
 
@@ -99,6 +107,7 @@ f (Belonging)   ████████░░ 80%  (NetworkX integration comple
 
 | Priority | Target | Est. Coherence | Target Dimension |
 |----------|--------|----------------|------------------|
+| HIGH | ishepard/pydriller | 3.042 (hunt.py) | q (replace hunt.py's fixed q = 0.5 with git activity) |
 | HIGH | requests | 0.81 | f (ecosystem integration) |
 | MEDIUM | spacy | 0.79 | Ψ, q, ρ (linguistic) |
 | LOW | scipy | 0.85 | ρ, τ (scientific computing) |

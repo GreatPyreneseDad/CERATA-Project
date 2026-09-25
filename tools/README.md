@@ -19,16 +19,19 @@ This directory contains practical implementations of Rose Glass analysis for def
 **Purpose**: Detects phishing attempts using multi-layer analysis including Rose Glass coherence analysis.
 
 **Detection Vectors**:
-1. URL Analysis - typosquatting, suspicious TLDs, IP addresses
+1. URL Analysis - typosquatting, suspicious TLDs, IP addresses (experimental branch: Public Suffix List via `integrations/tldextract_lens`)
 2. HTML Analysis - form hijacking, hidden fields, obfuscated JS
 3. Network Analysis - SSL certificates, HTTP headers
 4. Kit Fingerprinting - SocialFish and other known phishing kits
 5. **Rose Glass Coherence** - dimensional fracture detection
 
+**Trial Branches**: `PhishGuard(branch="experimental")` (default, DomainLens URL analysis), `"classic"` (Gen 3 behaviour), or `"trial"` (random 50/50 per call; `result.branch` records which served). See `forest/experimental_phishguard_gen4.md`.
+
 **Usage**:
 ```bash
-# Run demo with test cases
+# Run demo with test cases (optional branch: experimental | classic | trial)
 python3 tools/security/phishguard.py
+python3 tools/security/phishguard.py classic
 
 # Use in your own code
 from tools.security.phishguard import PhishGuard

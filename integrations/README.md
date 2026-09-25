@@ -89,6 +89,26 @@ NetworkX's 20+ years of graph theory wisdom metabolized into f-dimension relatio
 
 ---
 
+### tldextract (john-kurkowski/tldextract)
+
+**Status**: TRIAL
+**Coherence Score**: 3.142 (hunt.py, 0–4 scale; PRIME PREY)
+**Generation**: 4 (experimental)
+**Location**: `integrations/tldextract_lens/`
+
+**What Was Extracted**:
+
+| tldextract Module | Nematocyst | Rose Glass Dimension |
+|-------------------|------------|---------------------|
+| `Trie` + PSL suffix lookup | `SuffixTrie` | f (ownership boundary) |
+| `TLDExtract` / `ExtractResult` | `DomainLens` / `DomainReading` | f (belonging) |
+
+**Trial Outcome**: IN_PROGRESS: PhishGuard classic (Gen 3) vs experimental (Gen 4). See `forest/experimental_phishguard_gen4.md`.
+
+**Key Achievement**: Dependency-free Public Suffix List perception; closes PhishGuard's `evilgoogle.com` brand bypass and the URL-only IP-host blind spot.
+
+---
+
 ## Integration Template
 
 When adding new integrations, follow this structure:
