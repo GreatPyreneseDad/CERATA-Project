@@ -13,19 +13,55 @@ Detection Vectors:
 5. SSL/TLS certificate anomalies
 6. Rose Glass coherence analysis of page intent
 
+Trial branches (see forest/experimental_phishguard_gen4.md):
+- CLASSIC: original string-based URL analysis (Gen 3).
+- EXPERIMENTAL: URL analysis via the DomainLens nematocyst
+  (integrations/tldextract_lens), using the Public Suffix List to reason
+  about registered domains. URL-only scans are scored on URL evidence alone.
+
 Author: MacGregor Holding Company
 License: MIT
 """
 
+import random
 import re
 import hashlib
 import json
+import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from enum import Enum
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 import html.parser
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+try:
+    from integrations.tldextract_lens import DomainLens
+    DOMAIN_LENS_AVAILABLE = True
+except ImportError:
+    DomainLens = None
+    DOMAIN_LENS_AVAILABLE = False
+
+BRANCH_CLASSIC = "classic"
+BRANCH_EXPERIMENTAL = "experimental"
+BRANCH_TRIAL = "trial"
+
+# Registered domains each brand legitimately operates from (experimental branch).
+BRAND_REGISTERED_DOMAINS = {
+    'facebook': {'facebook.com', 'fb.com'},
+    'google': {'google.com'},
+    'linkedin': {'linkedin.com'},
+    'github': {'github.com'},
+    'twitter': {'twitter.com', 'x.com'},
+    'instagram': {'instagram.com'},
+    'microsoft': {'microsoft.com', 'microsoftonline.com', 'live.com'},
+}
+
+HOMOGLYPHS = {
+    '0': 'o', '1': 'l', '3': 'e', '4': 'a', '5': 's', '8': 'b', '9': 'g',
+}
 
 
 class ThreatLevel(Enum):
@@ -57,10 +93,12 @@ class DetectionResult:
     recommendations: List[str]
     timestamp: datetime = field(default_factory=datetime.now)
     rose_glass_coherence: Optional[Dict] = None
+    branch: str = BRANCH_CLASSIC
 
     def to_dict(self) -> Dict:
         return {
             'url': self.url,
+            'branch': self.branch,
             'threat_level': self.threat_level.name,
             'confidence': self.confidence,
             'matched_signatures': [s.name for s in self.matched_signatures],
@@ -167,9 +205,27 @@ class PhishGuard:
     5. Coherence Analysis - Rose Glass intent detection
     """
 
-    def __init__(self):
+    def __init__(self, branch: str = BRANCH_EXPERIMENTAL):
+        """
+        Args:
+            branch: 'experimental' (DomainLens, default), 'classic' (Gen 3
+                behaviour), or 'trial' (random 50/50 per analyze() call, as in
+                forest/trial_protocol.md). Falls back to 'classic' if the
+                DomainLens nematocyst cannot be imported.
+        """
+        if branch not in (BRANCH_CLASSIC, BRANCH_EXPERIMENTAL, BRANCH_TRIAL):
+            raise ValueError(f"Unknown branch: {branch!r}")
+        if branch != BRANCH_CLASSIC and not DOMAIN_LENS_AVAILABLE:
+            branch = BRANCH_CLASSIC
+        self.branch = branch
+        self.domain_lens = DomainLens() if branch != BRANCH_CLASSIC else None
         self.signatures = self._load_signatures()
         self.known_legitimate_domains = self._load_legitimate_domains()
+
+    def _select_branch(self) -> str:
+        if self.branch == BRANCH_TRIAL:
+            return random.choice((BRANCH_CLASSIC, BRANCH_EXPERIMENTAL))
+        return self.branch
 
     def _load_signatures(self) -> List[IOCSignature]:
         """Load all IOC signatures"""
@@ -272,8 +328,110 @@ class PhishGuard:
             'login.live.com',
         }
 
-    def analyze_url(self, url: str) -> Dict:
-        """Analyze URL for phishing indicators"""
+    def analyze_url(self, url: str, branch: Optional[str] = None) -> Dict:
+        """Analyze URL for phishing indicators using the given trial branch."""
+        branch = branch or self._select_branch()
+        if branch == BRANCH_EXPERIMENTAL and DOMAIN_LENS_AVAILABLE:
+            result = self._analyze_url_experimental(url)
+        else:
+            branch = BRANCH_CLASSIC
+            result = self._analyze_url_classic(url)
+        result['branch'] = branch
+        return result
+
+    def _analyze_url_experimental(self, url: str) -> Dict:
+        """URL analysis via DomainLens: reason about registered domains."""
+        if self.domain_lens is None:
+            self.domain_lens = DomainLens()
+        anomalies = []
+        risk_score = 0.0
+
+        reading = self.domain_lens.perceive(url)
+        parsed = urlparse(url if '//' in url else '//' + url)
+        path = parsed.path.lower()
+
+        if reading.is_ip:
+            anomalies.append(f"IP address used instead of domain name (IPv{reading.ip_version})")
+            risk_score += 0.6
+
+        try:
+            port = parsed.port
+        except ValueError:
+            port = None
+            anomalies.append("Malformed port in URL")
+            risk_score += 0.4
+        if port is not None and port not in (80, 443):
+            anomalies.append(f"Non-standard port: {port}")
+            risk_score += 0.4
+
+        if not reading.is_ip and reading.host:
+            registered = reading.registered_domain
+            official = set().union(*BRAND_REGISTERED_DOMAINS.values())
+
+            if registered not in official:
+                for legit in sorted(official):
+                    if self._is_typosquat_label(reading.domain, legit.split('.')[0]):
+                        anomalies.append(f"Possible typosquat of {legit}")
+                        risk_score += 0.8
+                        break
+
+                host_labels = [self._normalize_homoglyphs(label)
+                               for label in reading.subdomain_labels + [reading.domain]]
+                for brand in BRAND_REGISTERED_DOMAINS:
+                    if any(brand in label for label in host_labels):
+                        anomalies.append(
+                            f"Brand '{brand}' used in non-official domain "
+                            f"{registered or reading.host}"
+                        )
+                        risk_score += 0.7
+
+            tld = reading.suffix.rsplit('.', 1)[-1] if reading.suffix else ''
+            if f'.{tld}' in self.SUSPICIOUS_TLDS:
+                anomalies.append(f"Suspicious TLD: .{tld}")
+                risk_score += 0.3
+
+            if len(reading.subdomain_labels) >= 3:
+                anomalies.append(f"Excessive subdomains: {reading.subdomain}")
+                risk_score += 0.4
+
+            if not reading.suffix:
+                anomalies.append("Host has no public suffix")
+                risk_score += 0.2
+
+        for admin_path in SocialFishSignatures.ADMIN_PATHS:
+            if admin_path in path:
+                anomalies.append(f"Phishing kit admin panel path: {admin_path}")
+                risk_score += 0.9
+
+        return {
+            'domain': reading.host,
+            'registered_domain': reading.registered_domain,
+            'domain_reading': reading.to_dict(),
+            'path': path,
+            'anomalies': anomalies,
+            'risk_score': min(risk_score, 1.0)
+        }
+
+    SUSPICIOUS_TLDS = ['.xyz', '.tk', '.ml', '.ga', '.cf', '.gq', '.top', '.work', '.click']
+
+    @staticmethod
+    def _normalize_homoglyphs(label: str) -> str:
+        return ''.join(HOMOGLYPHS.get(ch, ch) for ch in label.lower())
+
+    def _is_typosquat_label(self, label: str, legit: str) -> bool:
+        """Experimental typosquat check on registrable labels (e.g. 'g00gle' vs 'google')."""
+        if not label or label == legit:
+            return False
+        if self._normalize_homoglyphs(label) == legit:
+            return True
+        # Short labels (x, fb, live) produce too many edit-distance false positives.
+        if len(legit) < 5:
+            return False
+        max_distance = 1 if len(legit) < 6 else 2
+        return self._levenshtein_distance(label, legit) <= max_distance
+
+    def _analyze_url_classic(self, url: str) -> Dict:
+        """Analyze URL for phishing indicators (Gen 3 classic branch)"""
         anomalies = []
         risk_score = 0.0
 
@@ -558,9 +716,11 @@ class PhishGuard:
         """
         all_anomalies = []
         all_signatures = []
+        branch = self._select_branch()
 
         # URL Analysis
-        url_analysis = self.analyze_url(url)
+        url_analysis = self.analyze_url(url, branch=branch)
+        branch = url_analysis['branch']
         all_anomalies.extend(url_analysis['anomalies'])
 
         # HTML Analysis (if provided)
@@ -577,11 +737,16 @@ class PhishGuard:
             all_anomalies.extend(coherence_analysis['fractures'])
 
         # Calculate overall risk
-        risk_score = (
-            url_analysis['risk_score'] * 0.3 +
-            html_analysis['risk_score'] * 0.5 +
-            (1 - coherence_analysis['overall_coherence'] if coherence_analysis else 0) * 0.2
-        )
+        if branch == BRANCH_EXPERIMENTAL and not html_content:
+            # No page content: score on URL evidence alone instead of
+            # diluting it with absent HTML/coherence signals.
+            risk_score = url_analysis['risk_score']
+        else:
+            risk_score = (
+                url_analysis['risk_score'] * 0.3 +
+                html_analysis['risk_score'] * 0.5 +
+                (1 - coherence_analysis['overall_coherence'] if coherence_analysis else 0) * 0.2
+            )
 
         # Determine threat level
         if risk_score < 0.2:
@@ -595,6 +760,11 @@ class PhishGuard:
         else:
             threat_level = ThreatLevel.ACTIVE_ATTACK
 
+        # URL evidence alone cannot confirm a phish.
+        if (branch == BRANCH_EXPERIMENTAL and not html_content
+                and threat_level.value > ThreatLevel.LIKELY_PHISH.value):
+            threat_level = ThreatLevel.LIKELY_PHISH
+
         # Generate recommendations
         recommendations = self._generate_recommendations(
             threat_level, all_anomalies, all_signatures
@@ -607,7 +777,8 @@ class PhishGuard:
             matched_signatures=all_signatures,
             anomalies=all_anomalies,
             recommendations=recommendations,
-            rose_glass_coherence=coherence_analysis
+            rose_glass_coherence=coherence_analysis,
+            branch=branch,
         )
 
     def _generate_recommendations(
@@ -748,7 +919,8 @@ def main():
     ╚═══════════════════════════════════════════════════════════════╝
     """)
 
-    guard = PhishGuard()
+    branch = sys.argv[1] if len(sys.argv) > 1 else BRANCH_EXPERIMENTAL
+    guard = PhishGuard(branch=branch)
 
     # Test cases
     test_cases = [
@@ -799,7 +971,8 @@ def main():
             claimed_identity=test['identity']
         )
 
-        print(f"\n🎯 Threat Level: {result.threat_level.name}")
+        print(f"\n🌿 Branch: {result.branch.upper()}")
+        print(f"🎯 Threat Level: {result.threat_level.name}")
         print(f"📊 Confidence: {result.confidence:.1%}")
 
         if result.anomalies:
