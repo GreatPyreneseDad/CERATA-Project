@@ -1,0 +1,111 @@
+name: CERATA Hunt
+description: Hunt open-source repos through Rose Glass, then metabolize the best code into yours as a reviewed PR. Any model, or Copilot.
+author: Christopher MacGregor bin Joseph (ROSE Corp)
+
+branding:
+  icon: crosshair
+  color: purple
+
+inputs:
+  github-token:
+    description: >
+      Token used to comment, push the consume branch and open the PR.
+      Defaults to the workflow GITHUB_TOKEN. PRs opened with GITHUB_TOKEN do not
+      trigger other workflows; pass a PAT or GitHub App token if you want CI to run on them.
+    required: false
+    default: ${{ github.token }}
+  provider:
+    description: >
+      Who does the metabolism for `/cerata consume`. `auto` (default) picks from the key.
+      Any model: anthropic, openai, openrouter, gemini, deepseek, mistral, groq, together, xai, ollama,
+      or any OpenAI-compatible endpoint via `base-url`. Or `copilot`: no model key, hand the
+      consume to GitHub Copilot's cloud agent (needs `copilot-token`). `/cerata hunt` needs none of this.
+    required: false
+    default: auto
+  api-key:
+    description: API key for the chosen provider.
+    required: false
+    default: ""
+  base-url:
+    description: OpenAI-compatible base URL (e.g. https://my-proxy/v1). Overrides the provider preset.
+    required: false
+    default: ""
+  model:
+    description: Model id. Empty = the provider's preset default.
+    required: false
+    default: ""
+  max-output-tokens:
+    description: Output budget per model call. Lower it for models with small output limits.
+    required: false
+    default: "32000"
+  copilot-token:
+    description: >
+      For `provider: copilot`. A PAT (user token) with issues + pull requests write; GitHub rejects
+      Copilot assignment from the workflow GITHUB_TOKEN. Requires a paid Copilot plan.
+    required: false
+    default: ""
+  anthropic-api-key:
+    description: "Deprecated alias for `api-key` with provider anthropic."
+    required: false
+    default: ""
+  command:
+    description: >
+      Explicit command (e.g. "hunt psf/requests"). Leave empty to read it from the
+      triggering issue comment (`/cerata ...`).
+    required: false
+    default: ""
+  allowed-associations:
+    description: Comma-separated author associations allowed to trigger CERATA from comments.
+    required: false
+    default: OWNER,MEMBER,COLLABORATOR
+  allow-copyleft:
+    description: Allow consuming GPL/LGPL/AGPL prey. Off by default; copyleft code changes your license obligations.
+    required: false
+    default: "false"
+  max-repair-rounds:
+    description: How many times CERATA may revise its integration after failing tests.
+    required: false
+    default: "2"
+  base-branch:
+    description: Branch the consume PR targets. Defaults to the repository default branch.
+    required: false
+    default: ""
+
+outputs:
+  command:
+    description: The command that ran (hunt, consume, help).
+    value: ${{ steps.cerata.outputs.command }}
+  viability:
+    description: Prey viability from the hunt (PRIME_PREY, VIABLE_PREY, MARGINAL_PREY, UNFIT_PREY).
+    value: ${{ steps.cerata.outputs.viability }}
+  coherence:
+    description: Prey coherence score (0-4).
+    value: ${{ steps.cerata.outputs.coherence }}
+  pr-url:
+    description: URL of the consume pull request, when one was opened.
+    value: ${{ steps.cerata.outputs.pr-url }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - id: cerata
+      shell: bash
+      env:
+        CERATA_HOME: ${{ github.action_path }}
+        CERATA_GITHUB_TOKEN: ${{ inputs.github-token }}
+        CERATA_PROVIDER: ${{ inputs.provider }}
+        CERATA_API_KEY: ${{ inputs.api-key }}
+        CERATA_ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        CERATA_BASE_URL: ${{ inputs.base-url }}
+        CERATA_MODEL: ${{ inputs.model }}
+        CERATA_MAX_OUTPUT_TOKENS: ${{ inputs.max-output-tokens }}
+        CERATA_COPILOT_TOKEN: ${{ inputs.copilot-token }}
+        CERATA_COMMAND: ${{ inputs.command }}
+        CERATA_ALLOWED_ASSOCIATIONS: ${{ inputs.allowed-associations }}
+        CERATA_ALLOW_COPYLEFT: ${{ inputs.allow-copyleft }}
+        CERATA_MAX_REPAIR_ROUNDS: ${{ inputs.max-repair-rounds }}
+        CERATA_BASE_BRANCH: ${{ inputs.base-branch }}
+      run: python "$CERATA_HOME/cerata_action/main.py"

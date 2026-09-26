@@ -6,6 +6,36 @@
 
 ---
 
+## Run CERATA on your repo
+
+CERATA ships as a GitHub Action. Install it once and command it from any issue:
+
+```
+/cerata hunt psf/requests                          # Rose Glass perception report + license check
+/cerata consume psf/requests src/requests/adapters.py   # metabolize → pull request
+/cerata consume owner/repo -- only the retry logic # steer the metabolism
+```
+
+**Setup (2 minutes):**
+
+1. Copy [`templates/workflows/cerata.yml`](templates/workflows/cerata.yml) to `.github/workflows/cerata.yml`.
+2. Pick what powers `consume` (`hunt` needs nothing):
+   - **Any model:** add a `CERATA_API_KEY` secret. Anthropic, OpenAI, OpenRouter, Gemini, DeepSeek, Mistral, Groq, Together, xAI and Ollama keys are auto-detected, and any OpenAI-compatible endpoint works via `base-url`.
+   - **No model key, via Copilot:** set `provider: copilot` and add a PAT as `CERATA_COPILOT_PAT` (a paid Copilot plan is required). CERATA hunts, writes a consume brief as an issue and assigns it to Copilot's cloud agent, which opens the PR. Copy [`templates/agents/cerata.agent.md`](templates/agents/cerata.agent.md) to `.github/agents/` so Copilot works as CERATA. That profile also lets people run `hunt` and `consume` straight from Copilot, with no Action at all.
+3. Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests**.
+
+**What consume does:** clones the prey, runs the hunt, refuses copyleft or unlicensed code, asks the
+model to survey your repo, then digests the chosen files into a self-contained capability with tests
+and CLASSIC/EXPERIMENTAL trial records. It runs those tests (sandboxed as an unprivileged user) and
+lets the model repair failures. Then it opens a PR carrying the hunt record, the upstream license and
+attribution. Nothing merges itself.
+
+**Safety model:** only owners, members and collaborators can command it. Prey code is treated as
+untrusted data. The model can't write to `.git/`, `.github/` or `.cerata/`. The persisted checkout
+token is stripped before any generated code runs. Read every consume PR before merging it.
+
+---
+
 ## What is Cerata?
 
 Cerata is not a standalone application. It's a **Claude Project configuration** that turns Claude into an evolving predator that consumes code repositories and grows more capable with every hunt.

@@ -1,0 +1,10 @@
+CERATA
+Copyright 2026 Christopher MacGregor bin Joseph / ROSE Corp (MacGregor Holding Company)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party components consumed into this repository keep their own licenses.
+Each lives under integrations/<name>/ with its upstream license file and source
+attribution, including:
+
+  integrations/tldextract_lens  tldextract (BSD-3-Clause), Public Suffix List (MPL-2.0)
