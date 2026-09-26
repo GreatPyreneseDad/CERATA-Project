@@ -21,6 +21,36 @@ MAX_HOST_READ = 10
 MAX_HOST_READ_CHARS = 60_000
 FORBIDDEN_PREFIXES = (".git/", ".github/", ".cerata/")
 
+TEST_RULES = {
+    "python": """TEST RULES (host is Python): stdlib `unittest` only (no pytest-only features). Name files
+`test_*.py`. CERATA runs each with `python -m unittest <path/to/test_file.py>` from the repo root.""",
+    "typescript": """TEST RULES (host is TypeScript): write the capability as a self-contained module. Use only
+erasable TypeScript syntax (no enums, namespaces, parameter properties or decorators) so Node can strip
+types. Tests use `node:test` and `node:assert/strict` only (no jest/vitest/playwright), are named
+`*.test.ts`, and import the module under test with an explicit relative `.ts` extension
+(e.g. `import { x } from '../src/foo/bar.ts'`). The tested module must not import npm packages, DOM
+or browser APIs; keep those in a thin adapter the tests don't load. CERATA runs each with
+`node --test <file>` (Node 22+, type stripping) from the repo root, without `npm install`.""",
+    "javascript": """TEST RULES (host is JavaScript): write the capability as a self-contained ES module. Tests use
+`node:test` and `node:assert/strict` only, are named `*.test.mjs`, and import the module under test with
+an explicit relative extension. The tested module must not import npm packages or browser APIs.
+CERATA runs each with `node --test <file>` from the repo root, without `npm install`.""",
+}
+
+
+def host_language(host: Path) -> str:
+    counts = {"python": 0, "typescript": 0, "javascript": 0}
+    for f in git_ls(host):
+        if "node_modules/" in f or f.endswith(".d.ts"):
+            continue
+        if f.endswith(".py"):
+            counts["python"] += 1
+        elif f.endswith((".ts", ".tsx", ".mts")):
+            counts["typescript"] += 1
+        elif f.endswith((".js", ".jsx", ".mjs")):
+            counts["javascript"] += 1
+    return max(counts, key=counts.get) if any(counts.values()) else "python"
+
 SYSTEM = """You are CERATA, a code predator that grows by metabolizing open-source code into a host repository.
 
 You do not copy-paste. You DIGEST: break prey into functional threads, keep only the nematocysts
@@ -36,8 +66,8 @@ Rules of the body:
 4. Dual-branch trial: the host's current behaviour is CLASSIC and must keep working unchanged.
    New behaviour is EXPERIMENTAL and must be selectable (flag, parameter or separate module).
    Never delete or silently change existing behaviour.
-5. Tests: write stdlib `unittest` tests (no pytest-only features) that run from the repo root with
-   `python -m unittest <path/to/test_file.py>`. Tests must not use the network.
+5. Write in the host's language and follow the TEST RULES given with the task exactly: CERATA runs
+   those tests itself and feeds failures back to you. Tests must not use the network.
 6. Scope: only write inside the host repo. Never write under .git/, .github/ or .cerata/.
    Never add CI workflows, install hooks, or code that reads environment secrets or makes network calls
    at import time.
@@ -233,7 +263,29 @@ def apply_files(host: Path, files: Dict[str, str]) -> Tuple[List[str], List[str]
 
 def _is_test(rel: str) -> bool:
     name = rel.rsplit("/", 1)[-1]
-    return rel.endswith(".py") and (name.startswith("test_") or name.endswith("_test.py"))
+    if rel.endswith(".py"):
+        return name.startswith("test_") or name.endswith("_test.py")
+    return bool(re.search(r"\.test\.(ts|mts|js|mjs)$", name))
+
+
+def _node_strips_types_by_default(node: str) -> bool:
+    """Node >= 22.18 / 23.6 runs .ts natively; older 22.x needs --experimental-strip-types."""
+    try:
+        v = subprocess.run([node, "-p", "process.versions.node"], capture_output=True, text=True,
+                           timeout=10).stdout.strip()
+        major, minor = (int(x) for x in v.split(".")[:2])
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return False
+    return (major, minor) >= (22, 18) and not (major == 23 and minor < 6)
+
+
+def _test_cmd(rel: str) -> List[str]:
+    if rel.endswith(".py"):
+        return [shutil.which("python3") or "python3", "-m", "unittest", "-v", rel]
+    node = shutil.which("node") or "node"
+    if rel.endswith((".ts", ".mts")) and not _node_strips_types_by_default(node):
+        return [node, "--experimental-strip-types", "--no-warnings", "--test", rel]
+    return [node, "--test", rel]
 
 
 def _sandbox_prefix() -> Tuple[List[str], str]:
@@ -262,14 +314,15 @@ def run_tests(host: Path, written: List[str], timeout: int = 300) -> Dict:
            "LANG": "C.UTF-8", "PYTHONPATH": str(repo), "PYTHONDONTWRITEBYTECODE": "1"}
     outputs, passed = [], True
     for t in tests:
-        cmd = prefix + ["env", "-i"] + [f"{k}={v}" for k, v in env.items()] + \
-            [shutil.which("python3") or "python3", "-m", "unittest", "-v", t]
+        test_cmd = _test_cmd(t)
+        cmd = prefix + ["env", "-i"] + [f"{k}={v}" for k, v in env.items()] + test_cmd
+        shown = " ".join([Path(test_cmd[0]).name] + test_cmd[1:])
         try:
             r = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=timeout)
-            outputs.append(f"$ python -m unittest {t}  [{mode}]\n{r.stdout}{r.stderr}")
+            outputs.append(f"$ {shown}  [{mode}]\n{r.stdout}{r.stderr}")
             passed &= r.returncode == 0
         except subprocess.TimeoutExpired:
-            outputs.append(f"$ python -m unittest {t}\nTIMEOUT after {timeout}s")
+            outputs.append(f"$ {shown}\nTIMEOUT after {timeout}s")
             passed = False
     shutil.rmtree(work, ignore_errors=True)
     return {"ran": True, "passed": passed, "output": "\n\n".join(outputs)[-20000:], "mode": mode}
@@ -281,6 +334,8 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
                focus: str = "", max_repair: int = 2, log=print) -> Dict:
     files = select_prey_files(prey, hunt, paths)
     log(f"consuming {files}")
+    lang = host_language(host)
+    log(f"host language: {lang}")
     ctx = host_context(host) + "\n\n" + prey_context(prey, slug, hunt, files)
     if focus:
         ctx += f"\n\n### Operator focus\n{focus}"
@@ -290,7 +345,8 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
     to_read = parse_read(reply)
     log(f"survey: reading {to_read}")
     messages += [{"role": "assistant", "content": reply},
-                 {"role": "user", "content": read_host_files(host, to_read) + "\n\n" + METABOLIZE}]
+                 {"role": "user", "content": read_host_files(host, to_read) + "\n\n" + METABOLIZE
+                  + "\n\n" + TEST_RULES[lang]}]
 
     reply = llm.complete(SYSTEM, messages)
     plan, out_files = parse_output(reply)
@@ -317,7 +373,7 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
         rounds += 1
 
     return {"plan": plan, "written": written, "rejected": rejected, "tests": tests,
-            "rounds": rounds, "declined": False, "consumed": files}
+            "rounds": rounds, "declined": False, "consumed": files, "language": lang}
 
 
 def attribution(host: Path, prey: Path, slug: str, hunt: Dict, integration_point: str,

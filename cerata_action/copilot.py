@@ -47,7 +47,7 @@ def brief(slug: str, hunt: Dict, files: List[str], focus: str) -> str:
 ### Deliverables (one PR)
 1. The integration: digested, adapted, zero new dependencies where possible, attribution header on every consumed file.
 2. Copy the upstream license file to `<integration dir>/LICENSE-{slug.split('/')[1]}`.
-3. Stdlib `unittest` tests runnable with `python -m unittest <file>` from the repo root, no network.
+3. Tests in the host's language that run without network: Python `unittest` (`python -m unittest <file>`), or for TS/JS `node:test` files (`node --test <file>`) that need no `npm install`. Run them and make them pass.
 4. Trial records `forest/classic_<domain>_gen<N>.md` and `forest/experimental_<domain>_gen<N+1>.md`. CLASSIC behaviour must stay unchanged and selectable.
 5. PR body with a Hunt Record (prey, commit, license, coherence), a nematocyst table, what was discarded, and warnings.
 
