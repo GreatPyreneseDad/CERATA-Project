@@ -50,7 +50,7 @@ def analyze_repo_structure(repo_path: Path) -> Dict:
     }
     
     for f in repo_path.rglob('*'):
-        if '.git' in str(f):
+        if '.git' in f.relative_to(repo_path).parts:  # was substring match: also skipped .github/ (CI)
             continue
             
         if f.is_file():
