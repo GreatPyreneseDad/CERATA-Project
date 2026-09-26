@@ -62,10 +62,12 @@ Rules of the body:
 2. Prefer zero new third-party dependencies. If the prey depends on a library, port or discard that
    part; do not add requirements unless unavoidable (then say so in the summary).
 3. Attribution is mandatory: every consumed source file gets a header naming the upstream repo,
-   commit and license. The upstream LICENSE file is copied for you; do not write it yourself.
+   commit and license. CERATA copies the upstream LICENSE file itself: never write any LICENSE,
+   LICENCE or COPYING file (they are rejected).
 4. Dual-branch trial: the host's current behaviour is CLASSIC and must keep working unchanged.
-   New behaviour is EXPERIMENTAL and must be selectable (flag, parameter or separate module).
-   Never delete or silently change existing behaviour.
+   New behaviour is EXPERIMENTAL and must be REACHABLE: modify the existing host code that should use
+   it so it is selectable behind a flag or parameter that defaults to CLASSIC. A library nothing calls
+   is not a trial. Never delete or silently change existing behaviour.
 5. Write in the host's language and follow the TEST RULES given with the task exactly: CERATA runs
    those tests itself and feeds failures back to you. Tests must not use the network.
 6. Scope: only write inside the host repo. Never write under .git/, .github/ or .cerata/.
@@ -109,6 +111,8 @@ per file to create or fully replace (complete file contents, no diffs, no placeh
 
 Include: the integration module(s), tests, and trial records `forest/classic_<domain>_gen<N>.md` and
 `forest/experimental_<domain>_gen<N+1>.md` (short: capabilities, behaviour changes, evaluation metrics).
+Trial records are Veritas documents: any number (%, ms, fps, x faster...) is written as a
+"target" unless a test in this PR measures it.
 If the host has `capabilities/manifest.md` or an integrations README, update it too.
 If the prey does not fill a real gap, return the plan with an empty nematocysts list and no files."""
 
@@ -121,6 +125,24 @@ for every file you change. Files you do not re-send stay as they are.
 ```
 {output}
 ```"""
+
+
+WIRE_SURVEY = """## Task: WIRE (survey)
+
+None of your files change existing host code, so the EXPERIMENTAL branch is unreachable: nothing
+calls the new capability. Wire it into the host code that should use it, behind a flag or parameter
+that defaults to CLASSIC (behaviour unchanged when off).
+
+First, which existing host files must you modify? (max 5) Reply with ONLY:
+<read>["path/one.ts"]</read>
+If wiring is impossible without breaking CLASSIC, reply <read>[]</read> and nothing else."""
+
+WIRE = """## Task: WIRE
+
+Modify the files above so EXPERIMENTAL is selectable and defaults to CLASSIC. Reply with a <plan>
+block (same schema; add "wiring": "how to switch EXPERIMENTAL on") and complete <file> blocks for
+every file you change (full contents, not diffs). Update the tests and trial records if needed.
+If you cannot wire it safely, reply with a <plan> containing "unwired_reason" and no files."""
 
 
 class ConsumeError(RuntimeError):
@@ -245,11 +267,15 @@ def read_host_files(host: Path, paths: List[str]) -> str:
     return "\n\n".join(out)
 
 
+_LICENSE_NAME = re.compile(r"^(licen[cs]e|copying|notice)([-._].*)?$", re.I)
+
+
 def apply_files(host: Path, files: Dict[str, str]) -> Tuple[List[str], List[str]]:
     written, rejected = [], []
     for rel, content in list(files.items())[:MAX_FILES]:
         target = safe_path(host, rel)
-        if target is None or len(content.encode()) > MAX_FILE_BYTES:
+        if (target is None or len(content.encode()) > MAX_FILE_BYTES
+                or _LICENSE_NAME.match(rel.rsplit("/", 1)[-1])):
             rejected.append(rel)
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -328,6 +354,21 @@ def run_tests(host: Path, written: List[str], timeout: int = 300) -> Dict:
     return {"ran": True, "passed": passed, "output": "\n\n".join(outputs)[-20000:], "mode": mode}
 
 
+_NUMBER_CLAIM = re.compile(r"\d+(?:\.\d+)?\s*(?:%|ms\b|µs\b|fps\b|x\b|×|seconds?\b|MB\b)", re.I)
+
+
+def unverified_claims(host: Path, written: List[str]) -> List[str]:
+    """Numeric claims in trial records not labelled as targets (Veritas)."""
+    out = []
+    for rel in written:
+        if not (rel.startswith("forest/") and rel.endswith(".md")):
+            continue
+        for line in (host / rel).read_text(errors="ignore").splitlines():
+            if _NUMBER_CLAIM.search(line) and "target" not in line.lower():
+                out.append(f"`{rel}`: {line.strip()[:160]}")
+    return out[:10]
+
+
 # ---------------------------------------------------------------- the loop --
 
 def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[str],
@@ -353,27 +394,67 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
     if not plan.get("nematocysts") or not out_files:
         return {"plan": plan, "written": [], "rejected": [], "tests": {"ran": False}, "rounds": 1,
                 "declined": True, "consumed": files}
-    written, rejected = apply_files(host, out_files)
+    pre_existing = set(git_ls(host))
+    state = {"plan": plan, "reply": reply, "rejected": []}
+    written, rej = apply_files(host, out_files)
+    state["rejected"] += rej
     tests = run_tests(host, written)
     rounds = 1
-    while tests["ran"] and not tests["passed"] and rounds <= max_repair:
-        log(f"tests failed, repair round {rounds}")
-        messages += [{"role": "assistant", "content": reply},
-                     {"role": "user", "content": REPAIR.format(round=rounds, output=tests["output"][-12000:])}]
-        reply = llm.complete(SYSTEM, messages)
+
+    def absorb(text, allow_plan=True):
+        nonlocal written
         try:
-            new_plan, new_files = parse_output(reply)
-            plan = {**plan, **{k: v for k, v in new_plan.items() if v}}
+            new_plan, new_files = parse_output(text)
+            if allow_plan:
+                state["plan"] = {**state["plan"], **{k: v for k, v in new_plan.items() if v}}
         except ConsumeError:
-            new_files = dict(_FILE.findall(reply))
+            new_files = {p: c for p, c in _FILE.findall(text)}
         w, rj = apply_files(host, new_files)
         written = sorted(set(written) | set(w))
-        rejected += rj
-        tests = run_tests(host, written)
-        rounds += 1
+        state["rejected"] += rj
+        return w
 
-    return {"plan": plan, "written": written, "rejected": rejected, "tests": tests,
-            "rounds": rounds, "declined": False, "consumed": files, "language": lang}
+    def repair_until_green(budget):
+        nonlocal tests, rounds
+        spent = 0
+        while tests["ran"] and not tests["passed"] and spent < budget:
+            log(f"tests failed, repair round {rounds}")
+            messages.extend([{"role": "assistant", "content": state["reply"]},
+                             {"role": "user", "content": REPAIR.format(
+                                 round=rounds, output=tests["output"][-12000:])}])
+            state["reply"] = llm.complete(SYSTEM, messages)
+            absorb(state["reply"])
+            tests = run_tests(host, written)
+            rounds += 1
+            spent += 1
+
+    repair_until_green(max_repair)
+
+    # WIRE: a capability nothing calls is not a trial. One chance to make EXPERIMENTAL reachable.
+    modified = [w for w in written if w in pre_existing]
+    if not modified:
+        log("not wired: asking the model to wire EXPERIMENTAL behind a flag")
+        messages.extend([{"role": "assistant", "content": state["reply"]},
+                         {"role": "user", "content": WIRE_SURVEY}])
+        survey = llm.complete(SYSTEM, messages)
+        targets = [t for t in parse_read(survey) if t in pre_existing][:5]
+        if targets:
+            messages.extend([{"role": "assistant", "content": survey},
+                             {"role": "user", "content": read_host_files(host, targets) + "\n\n" + WIRE}])
+            state["reply"] = llm.complete(SYSTEM, messages)
+            absorb(state["reply"])
+            tests = run_tests(host, written)
+            rounds += 1
+            repair_until_green(1)
+        else:
+            state["plan"].setdefault("unwired_reason", "model found no existing code it could safely wire")
+        modified = [w for w in written if w in pre_existing]
+
+    plan = state["plan"]
+    return {"plan": plan, "written": written, "rejected": state["rejected"], "tests": tests,
+            "rounds": rounds, "declined": False, "consumed": files, "language": lang,
+            "wired": bool(modified), "modified_existing": modified,
+            "unverified": unverified_claims(host, written)}
 
 
 def attribution(host: Path, prey: Path, slug: str, hunt: Dict, integration_point: str,

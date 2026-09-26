@@ -113,6 +113,8 @@ def pr_body(slug: str, hunt: Dict, plan: Dict, tests: Dict, rounds: int) -> str:
 Tests: {test_line} after {rounds} metabolism round(s).
 {details}
 
+{plan.get('_extra', '').strip()}
+
 ### Files
 {files}
 

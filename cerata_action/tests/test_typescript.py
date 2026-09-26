@@ -67,7 +67,8 @@ class TestTypeScript(unittest.TestCase):
                 "nematocysts": [{"name": "mulberry32", "source": "src/noise.ts:mulberry32"}]}
         llm = Scripted(['<read>["src/main.ts"]</read>',
                         reply(plan, {"src/noise/prng.ts": MODULE_BROKEN, "tests/prng.test.ts": TEST_TS}),
-                        reply({}, {"src/noise/prng.ts": MODULE_FIXED})])
+                        reply({}, {"src/noise/prng.ts": MODULE_FIXED}),
+                        "<read>[]</read>"])
         os.environ["CERATA_NO_SANDBOX"] = "1"
         res = consume.metabolize(llm, self.host, self.prey, "prey/noise", hunt, [], log=lambda *_: None)
         self.assertEqual(res["language"], "typescript")
@@ -76,6 +77,8 @@ class TestTypeScript(unittest.TestCase):
         self.assertEqual(res["rounds"], 2)
         self.assertIn("node --", res["tests"]["output"])
         self.assertNotIn("smoke.spec.ts", res["tests"]["output"])  # host's playwright specs untouched
+        self.assertFalse(res["wired"])                  # model declined to wire -> flagged, not hidden
+        self.assertIn("unwired_reason", res["plan"])
 
 
 if __name__ == "__main__":
