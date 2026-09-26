@@ -23,9 +23,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-from cerata_action import commands, consume, hunt_runner, report  # noqa: E402
+from cerata_action import commands, consume, copilot, hunt_runner, llm as llm_mod, report  # noqa: E402
 from cerata_action.github_api import GitHub, GitHubError  # noqa: E402
-from cerata_action.llm import Anthropic, LLMError, Scripted  # noqa: E402
+from cerata_action.llm import LLMError, Scripted  # noqa: E402
 
 MARKER = "<!-- cerata -->"
 
@@ -132,11 +132,23 @@ def strip_persisted_credentials(ctx: Context) -> None:
         git(ctx, "config", "--local", "--unset-all", key, check=False)
 
 
-def make_llm(model: str):
+def api_key() -> str:
+    return env("CERATA_API_KEY") or env("CERATA_ANTHROPIC_API_KEY")
+
+
+def resolve_provider() -> str:
+    p = env("CERATA_PROVIDER", "auto").lower()
+    if p == "auto" and not api_key() and not env("CERATA_BASE_URL") and env("CERATA_COPILOT_TOKEN"):
+        return "copilot"
+    return p
+
+
+def make_llm():
     scripted = env("CERATA_SCRIPTED_LLM")
     if scripted:
         return Scripted(json.loads(Path(scripted).read_text()), model="scripted")
-    return Anthropic(env("CERATA_ANTHROPIC_API_KEY"), model)
+    return llm_mod.make(resolve_provider(), api_key(), env("CERATA_MODEL"), env("CERATA_BASE_URL"),
+                        int(env("CERATA_MAX_OUTPUT_TOKENS", "32000")))
 
 
 def do_consume(ctx: Context, cmd, workdir: Path):
@@ -147,15 +159,18 @@ def do_consume(ctx: Context, cmd, workdir: Path):
         raise RuntimeError("Prey is UNFIT. Name specific files to extract anyway: "
                            f"`/cerata consume {cmd.prey.slug} path/file.py`.")
 
-    model = env("CERATA_MODEL", "claude-sonnet-4-5")
-    llm = make_llm(model)
-    strip_persisted_credentials(ctx)
     base = env("CERATA_BASE_BRANCH") or (git(ctx, "rev-parse", "--abbrev-ref", "HEAD", check=False) or "main")
     if not ctx.dry_run and not env("CERATA_BASE_BRANCH"):
         try:
             base = ctx.gh.default_branch()
         except GitHubError:
             pass
+
+    if resolve_provider() == "copilot" and not env("CERATA_SCRIPTED_LLM"):
+        return do_copilot_handoff(ctx, cmd, hunt, prey_dir, base)
+
+    llm = make_llm()
+    strip_persisted_credentials(ctx)
 
     result = consume.metabolize(llm, ctx.workspace, prey_dir, cmd.prey.slug, hunt, cmd.paths,
                                 focus=cmd.focus, max_repair=int(env("CERATA_MAX_REPAIR_ROUNDS", "2")),
@@ -169,7 +184,7 @@ def do_consume(ctx: Context, cmd, workdir: Path):
     extra = consume.attribution(ctx.workspace, prey_dir, cmd.prey.slug, hunt,
                                 plan.get("integration_point", ""), result["consumed"])
     written = sorted(set(result["written"]) | set(extra))
-    plan["_written"], plan["_model"] = written, llm.model
+    plan["_written"], plan["_model"] = written, f"{getattr(llm, 'provider', '?')}/{llm.model}"
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
     branch = f"cerata/consume-{cmd.prey.key.replace('__', '-')}-{stamp}"
@@ -215,6 +230,24 @@ def do_consume(ctx: Context, cmd, workdir: Path):
     return {"branch": branch, "url": url}
 
 
+def do_copilot_handoff(ctx: Context, cmd, hunt, prey_dir: Path, base: str):
+    token = env("CERATA_COPILOT_TOKEN")
+    if not token:
+        raise RuntimeError("`provider: copilot` needs `copilot-token`: a PAT with issues + pull requests "
+                           "write. The workflow GITHUB_TOKEN cannot assign Copilot.")
+    files = consume.select_prey_files(prey_dir, hunt, cmd.paths)
+    gh_user = GitHub(token, ctx.repo, ctx.dry_run)
+    issue = copilot.handoff(gh_user, ctx.workspace, ctx.repo, base, cmd.prey.slug, hunt, files, cmd.focus)
+    if ctx.dry_run:
+        print(json.dumps(gh_user.calls[-1][2], indent=2))
+    agent = "the `cerata` custom agent" if copilot.agent_profile_present(ctx.workspace) else "Copilot"
+    ctx.say(f"### 🐚 Handed to Copilot: {issue.get('html_url')}\n\n{agent} is consuming "
+            f"`{cmd.prey.slug}` ({', '.join(f'`{f}`' for f in files)}). Its PR will link back to that issue."
+            f"\n\n{report.SIGNATURE}")
+    set_output("pr-url", issue.get("html_url", ""))
+    return {"issue": issue.get("html_url")}
+
+
 # ------------------------------------------------------------------- main --
 
 def main() -> int:
@@ -246,7 +279,7 @@ def main() -> int:
                     ctx.gh.add_labels(ctx.issue, ["cerata:hunt"])
             else:
                 out = do_consume(ctx, cmd, workdir)
-                if ctx.dry_run and out:
+                if ctx.dry_run and out and out.get("body"):
                     print(out["body"])
             ctx.react("rocket")
             return 0

@@ -1,5 +1,6 @@
 # CERATA: copy to .github/workflows/cerata.yml in your repo.
 # Then comment on any issue:   /cerata hunt owner/repo   ·   /cerata consume owner/repo
+# Hunt is free. Consume runs on any model key, or on GitHub Copilot (see below).
 name: CERATA
 
 on:
@@ -32,6 +33,17 @@ jobs:
       - uses: GreatPyreneseDad/CERATA-Project@v1
         with:
           command: ${{ github.event.inputs.command }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # model: claude-sonnet-4-5
-          # github-token: ${{ secrets.CERATA_PAT }}   # use a PAT/App token if CI should run on CERATA PRs
+          # /cerata hunt needs nothing below. Pick ONE way to power /cerata consume:
+
+          # A) Any model key. Provider is auto-detected from the key, or set it explicitly.
+          api-key: ${{ secrets.CERATA_API_KEY }}
+          # provider: anthropic | openai | openrouter | gemini | deepseek | mistral | groq | together | xai
+          # model: ""            # empty = provider default
+          # base-url: ""         # any OpenAI-compatible endpoint (self-hosted, proxy, Azure v1 ...)
+
+          # B) No model key: hand consume to GitHub Copilot (paid Copilot plan + a PAT).
+          # provider: copilot
+          # copilot-token: ${{ secrets.CERATA_COPILOT_PAT }}
+          # Optional: copy templates/agents/cerata.agent.md to .github/agents/ so Copilot runs as CERATA.
+
+          # github-token: ${{ secrets.CERATA_PAT }}   # PAT/App token if CI should run on CERATA PRs

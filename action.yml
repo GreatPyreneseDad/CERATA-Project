@@ -1,5 +1,5 @@
 name: CERATA Hunt
-description: Hunt open-source repos through Rose Glass, then metabolize the best code into yours as a reviewed pull request.
+description: Hunt open-source repos through Rose Glass, then metabolize the best code into yours as a reviewed PR. Any model, or Copilot.
 author: Christopher MacGregor bin Joseph (ROSE Corp)
 
 branding:
@@ -14,14 +14,40 @@ inputs:
       trigger other workflows; pass a PAT or GitHub App token if you want CI to run on them.
     required: false
     default: ${{ github.token }}
-  anthropic-api-key:
-    description: Anthropic API key. Required for `/cerata consume`; `/cerata hunt` works without it.
+  provider:
+    description: >
+      Who does the metabolism for `/cerata consume`. `auto` (default) picks from the key.
+      Any model: anthropic, openai, openrouter, gemini, deepseek, mistral, groq, together, xai, ollama,
+      or any OpenAI-compatible endpoint via `base-url`. Or `copilot`: no model key, hand the
+      consume to GitHub Copilot's cloud agent (needs `copilot-token`). `/cerata hunt` needs none of this.
+    required: false
+    default: auto
+  api-key:
+    description: API key for the chosen provider.
+    required: false
+    default: ""
+  base-url:
+    description: OpenAI-compatible base URL (e.g. https://my-proxy/v1). Overrides the provider preset.
     required: false
     default: ""
   model:
-    description: Model used for metabolism (consume).
+    description: Model id. Empty = the provider's preset default.
     required: false
-    default: claude-sonnet-4-5
+    default: ""
+  max-output-tokens:
+    description: Output budget per model call. Lower it for models with small output limits.
+    required: false
+    default: "32000"
+  copilot-token:
+    description: >
+      For `provider: copilot`. A PAT (user token) with issues + pull requests write; GitHub rejects
+      Copilot assignment from the workflow GITHUB_TOKEN. Requires a paid Copilot plan.
+    required: false
+    default: ""
+  anthropic-api-key:
+    description: "Deprecated alias for `api-key` with provider anthropic."
+    required: false
+    default: ""
   command:
     description: >
       Explicit command (e.g. "hunt psf/requests"). Leave empty to read it from the
@@ -70,8 +96,13 @@ runs:
       env:
         CERATA_HOME: ${{ github.action_path }}
         CERATA_GITHUB_TOKEN: ${{ inputs.github-token }}
+        CERATA_PROVIDER: ${{ inputs.provider }}
+        CERATA_API_KEY: ${{ inputs.api-key }}
         CERATA_ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        CERATA_BASE_URL: ${{ inputs.base-url }}
         CERATA_MODEL: ${{ inputs.model }}
+        CERATA_MAX_OUTPUT_TOKENS: ${{ inputs.max-output-tokens }}
+        CERATA_COPILOT_TOKEN: ${{ inputs.copilot-token }}
         CERATA_COMMAND: ${{ inputs.command }}
         CERATA_ALLOWED_ASSOCIATIONS: ${{ inputs.allowed-associations }}
         CERATA_ALLOW_COPYLEFT: ${{ inputs.allow-copyleft }}

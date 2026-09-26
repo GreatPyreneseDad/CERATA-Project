@@ -19,7 +19,9 @@ CERATA ships as a GitHub Action. Install it once and command it from any issue:
 **Setup (2 minutes):**
 
 1. Copy [`templates/workflows/cerata.yml`](templates/workflows/cerata.yml) to `.github/workflows/cerata.yml`.
-2. Add an `ANTHROPIC_API_KEY` repository secret (needed for `consume` only; `hunt` is free).
+2. Pick what powers `consume` (`hunt` needs nothing):
+   - **Any model:** add a `CERATA_API_KEY` secret. Anthropic, OpenAI, OpenRouter, Gemini, DeepSeek, Mistral, Groq, Together, xAI and Ollama keys are auto-detected, and any OpenAI-compatible endpoint works via `base-url`.
+   - **No model key, via Copilot:** set `provider: copilot` and add a PAT as `CERATA_COPILOT_PAT` (a paid Copilot plan is required). CERATA hunts, writes a consume brief as an issue and assigns it to Copilot's cloud agent, which opens the PR. Copy [`templates/agents/cerata.agent.md`](templates/agents/cerata.agent.md) to `.github/agents/` so Copilot works as CERATA. That profile also lets people run `hunt` and `consume` straight from Copilot, with no Action at all.
 3. Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests**.
 
 **What consume does:** clones the prey, runs the hunt, refuses copyleft or unlicensed code, asks the

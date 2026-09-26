@@ -14,7 +14,8 @@ HELP = f"""### 🐚 CERATA
 | `/cerata consume owner/repo -- focus note` | Anything after ` -- ` steers the metabolism (e.g. `-- only the retry logic`). |
 | `/cerata help` | This table. |
 
-Consume needs an `ANTHROPIC_API_KEY` secret. Only owners, members and collaborators can command CERATA.
+Hunt is free. Consume uses whatever the workflow is configured with: any model API key, or GitHub Copilot
+(no model key). Only owners, members and collaborators can command CERATA.
 Nothing merges itself: every consume lands as a PR for a human to review.
 
 {SIGNATURE}"""
