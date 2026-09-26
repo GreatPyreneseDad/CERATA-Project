@@ -3,6 +3,7 @@
 import contextlib
 import importlib.util
 import io
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,8 +17,41 @@ _LICENSE_NAMES = ("license", "licence", "copying", "license.md", "license.txt",
                   "license.rst", "licence.md", "copying.md", "license-mit", "license.mit")
 
 
-NOT_NEMATOCYST_DIRS = ("scripts/", "docs/", "doc/", "examples/", "example/", "benchmarks/",
+NOT_NEMATOCYST_DIRS = ("scripts/", "docs/", "doc/", "examples/", "example/", "benchmarks/", "benchmark/", "perf/",
                        "bench/", "tests/", "test/", "tools/release", "ci/", ".github/")
+
+
+JS_EXT = (".ts", ".tsx", ".mts", ".js", ".jsx", ".mjs")
+_JS_SKIP_PARTS = {"node_modules", "dist", "build", "out", "coverage", "vendor", ".next", "__tests__"}
+_JS_FN = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\*?\s+\w+"
+                    r"|^\s*(?:export\s+)?(?:const|let)\s+\w+\s*(?::[^=]+)?=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*(?::[^=]+)?=>",
+                    re.M)
+_JS_CLASS = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+\w+", re.M)
+
+
+def js_nematocysts(repo: Path, max_candidates: int = 40):
+    """hunt.py reads Python only; this finds JS/TS candidates with the same scoring formula."""
+    out = []
+    for f in repo.rglob("*"):
+        if not f.is_file() or not f.name.endswith(JS_EXT):
+            continue
+        rel = f.relative_to(repo)
+        name = f.name.lower()
+        if (set(rel.parts) & _JS_SKIP_PARTS or ".git" in rel.parts or name.endswith((".d.ts", ".min.js"))
+                or re.search(r"\.(test|spec|stories|config)\.", name)):
+            continue
+        try:
+            text = f.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if len(text) > 300_000:
+            continue
+        fns, classes, lines = len(_JS_FN.findall(text)), len(_JS_CLASS.findall(text)), text.count("\n") + 1
+        if fns + classes:
+            out.append({"path": str(rel), "functions": fns, "classes": classes, "lines": lines,
+                        "score": (fns * 2 + classes * 3) / max(lines / 100, 1)})
+    out.sort(key=lambda x: x["score"], reverse=True)
+    return out[:max_candidates]
 
 
 def load_hunt_module(cerata_home: Path):
@@ -117,7 +151,9 @@ def hunt(hunt_mod, prey_path: Path, url: str, info: Optional[Dict],
     structure = hunt_mod.analyze_repo_structure(prey_path)
     quality = hunt_mod.analyze_code_quality(prey_path)
     coherence = hunt_mod.calculate_repo_coherence(structure, quality)
-    nematocysts = [n for n in hunt_mod.identify_nematocysts(prey_path, max_candidates=40)
+    found = hunt_mod.identify_nematocysts(prey_path, max_candidates=40) + js_nematocysts(prey_path)
+    found.sort(key=lambda x: x["score"], reverse=True)
+    nematocysts = [n for n in found
                    if not n["path"].lower().startswith(NOT_NEMATOCYST_DIRS)
                    and not n["path"].endswith(("conftest.py", "noxfile.py", "__main__.py"))][:15]
     viability = hunt_mod.determine_viability(coherence)

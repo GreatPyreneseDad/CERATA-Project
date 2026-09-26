@@ -25,7 +25,7 @@ index, so every installation's hunts teach every other installation's perception
 
 ## Publishing checklist (Phase 1)
 
-- [ ] Merge this branch; tag `v1.0.0` and a moving `v1` tag.
+- [x] Merge this branch; tag `v1.0.0` and a moving `v1` tag.
 - [ ] Marketplace requires `action.yml` at the root **and no workflow files in `.github/workflows/`**.
       Keep CI for this repo in a separate repo or run the tests locally:
       `python -m unittest discover -s cerata_action/tests -t .`

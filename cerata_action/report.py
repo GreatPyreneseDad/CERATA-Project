@@ -43,6 +43,10 @@ def hunt_markdown(slug: str, r: Dict) -> str:
         "",
         f"**License:** {'✅' if lic['consumable'] else '⛔'} {lic['note']}",
     ]
+    st = r["structure"]
+    if st.get("js_files", 0) > st.get("python_files", 0):
+        v.setdefault("warnings", []).append(
+            "Mostly JS/TS: hunt.py's ρ reads Python docstrings/type hints only, so ρ is understated")
     if v.get("warnings"):
         lines += ["", "**Warnings**"] + [f"- {w}" for w in v["warnings"]]
     if s:
@@ -60,8 +64,8 @@ def hunt_markdown(slug: str, r: Dict) -> str:
         lines += ["", "**Nematocyst candidates**", "", "| # | Path | fn | cls | lines |", "|---|---|---|---|---|"]
         for i, n in enumerate(cands, 1):
             lines.append(f"| {i} | `{n['path']}` | {n['functions']} | {n['classes']} | {n['lines']} |")
-    elif not r["structure"].get("python_files"):
-        lines += ["", "_No Python nematocysts detected. hunt.py currently reads Python only._"]
+    else:
+        lines += ["", "_No nematocysts detected (CERATA reads Python, TypeScript and JavaScript)._"]
     lines.append("")
     if v["proceed"] and lic["consumable"]:
         top = " ".join(n["path"] for n in cands[:2])

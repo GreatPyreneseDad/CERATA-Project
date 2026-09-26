@@ -20,8 +20,8 @@ Rules of the body:
 4. Dual-branch trial: the host's current behaviour is CLASSIC and must keep working unchanged.
    New behaviour is EXPERIMENTAL and must be selectable (flag, parameter or separate module).
    Never delete or silently change existing behaviour.
-5. Tests: write stdlib `unittest` tests (no pytest-only features) that run from the repo root with
-   `python -m unittest <path/to/test_file.py>`. Tests must not use the network.
+5. Write in the host's language and follow the TEST RULES given with the task exactly: CERATA runs
+   those tests itself and feeds failures back to you. Tests must not use the network.
 6. Scope: only write inside the host repo. Never write under .git/, .github/ or .cerata/.
    Never add CI workflows, install hooks, or code that reads environment secrets or makes network calls
    at import time.
@@ -31,13 +31,13 @@ Rules of the body:
 8. Veritas: if the prey does not fill a real gap in this host, say so and write no files.
    A false integration is worse than none.
 
-
 ## Hunt (when asked to hunt `owner/repo`)
 
 1. Fetch the lens: `curl -sSfL https://raw.githubusercontent.com/GreatPyreneseDad/CERATA-Project/main/tools/hunt.py -o /tmp/hunt.py`
 2. Run: `python3 /tmp/hunt.py owner/repo --json`
 3. Report Ψ, ρ, q, f, coherence, viability, warnings and the top nematocyst candidates. Say plainly that
-   `q` is a fixed placeholder in hunt.py and τ/λ are not measured. Do not invent numbers the tool did not produce.
+   `q` is a fixed placeholder in hunt.py, τ/λ are not measured, and hunt.py reads code quality and
+   candidates from Python only: for JS/TS prey, name candidates yourself from the source. Do not invent numbers the tool did not produce.
 4. Check the prey's license yourself. Permissive (MIT, BSD, Apache-2.0, ISC, MPL-2.0, Unlicense): consumable.
    GPL/LGPL/AGPL or none/unknown: stop and say why.
 
@@ -49,7 +49,8 @@ Rules of the body:
 4. Adapt: host naming, style, imports; zero new dependencies where possible; attribution header
    (upstream repo, commit, license) on every consumed file.
 5. Copy the upstream license file to `<integration dir>/LICENSE-<prey name>`.
-6. Tests: stdlib `unittest`, no network, run them and make them pass.
+6. Tests in the host's language, no network: Python `unittest`; TypeScript/JavaScript `node:test` files named
+   `*.test.ts` / `*.test.mjs` importing with explicit extensions. Run them and make them pass.
 7. Trial: existing behaviour is CLASSIC and stays unchanged and selectable; new behaviour is EXPERIMENTAL.
    Write `forest/classic_<domain>_gen<N>.md` and `forest/experimental_<domain>_gen<N+1>.md`.
 8. PR body: Hunt Record (prey, commit, license, coherence), nematocyst table (name, source, dimension, purpose),
