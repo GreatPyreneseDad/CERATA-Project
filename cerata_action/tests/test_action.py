@@ -143,10 +143,14 @@ class TestConsumeEndToEnd(unittest.TestCase):
                 "integrations/retry_lens/__init__.py": "",
                 "integrations/retry_lens/backoff.py": MODULE_BROKEN,
                 "integrations/retry_lens/tests/test_backoff.py": TEST,
-                "forest/experimental_retry_gen1.md": "# EXPERIMENTAL\n",
+                "forest/experimental_retry_gen1.md": "# EXPERIMENTAL\n- 2x faster recovery\n- target: 30% fewer errors\n",
                 ".github/workflows/pwn.yml": "on: push\n",
+                "LICENSE-retry": "MIT (model-written, must be rejected)\n",
             }),
             reply({}, {"integrations/retry_lens/backoff.py": MODULE_FIXED}),
+            '<read>["app.py", "not/in/host.py"]</read>',
+            reply({"wiring": "Set USE_BACKOFF=True in app.py"},
+                  {"app.py": "USE_BACKOFF = False  # EXPERIMENTAL: retry_lens.backoff\nprint('hi')\n"}),
         ]
         self.script = self.tmp / "script.json"
         self.script.write_text(json.dumps(responses))
@@ -179,9 +183,17 @@ class TestConsumeEndToEnd(unittest.TestCase):
         record = json.loads((h / ".cerata/hunts/prey__retry.json").read_text())
         self.assertEqual(record["consumed"], ["retry.py"])
         self.assertIn("✅ passed", out)
-        self.assertIn("after 2 metabolism round(s)", out)
+        self.assertIn("after 3 metabolism round(s)", out)  # metabolize, repair, wire
         self.assertIn(".github/workflows/pwn.yml", out)  # reported as rejected
         self.assertIn("injected instruction", out)
+        self.assertIn("✅ EXPERIMENTAL is reachable", out)
+        self.assertIn("`app.py`", out)
+        self.assertIn("Set USE_BACKOFF=True", out)
+        self.assertIn("USE_BACKOFF", (h / "app.py").read_text())
+        self.assertFalse((h / "LICENSE-retry").exists(), "model-written license must be rejected")
+        self.assertIn("`LICENSE-retry`", out)
+        self.assertIn("2x faster recovery", out)          # flagged as unverified
+        self.assertNotIn("30% fewer errors", out.split("Unverified numbers")[-1])  # labelled target: fine
 
     def test_prompt_marks_prey_as_untrusted(self):
         from cerata_action.llm import Scripted

@@ -189,11 +189,24 @@ def do_consume(ctx: Context, cmd, workdir: Path):
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M")
     branch = f"cerata/consume-{cmd.prey.key.replace('__', '-')}-{stamp}"
     title = plan.get("pr_title") or f"CERATA: consume {cmd.prey.slug}"
-    body = report.pr_body(cmd.prey.slug, hunt, plan, result["tests"], result["rounds"])
+    extra = ""
+    if result["wired"]:
+        how = plan.get("wiring", "")
+        extra += ("\n\n### Wiring\n✅ EXPERIMENTAL is reachable. Existing files changed: "
+                 + ", ".join(f"`{m}`" for m in result["modified_existing"]) + (f"\n\n{how}" if how else ""))
+    else:
+        extra += ("\n\n### Wiring\n⚠️ **Not wired.** No existing host code calls the new capability, so no trial "
+                 "is running: this PR only adds a library. " + plan.get("unwired_reason", ""))
+    if result["unverified"]:
+        extra += ("\n\n### Unverified numbers\nThese trial-record figures are not measured by any test in this PR; "
+                 "read them as targets:\n" + "\n".join(f"- {u}" for u in result["unverified"]))
     if result["rejected"]:
-        body += "\n\n> ⛔ Rejected unsafe paths from the model: " + ", ".join(f"`{r}`" for r in result["rejected"])
+        extra += ("\n\n> ⛔ Rejected paths (unsafe location, or a license file the model wrote; CERATA copies "
+                 "the upstream license itself): " + ", ".join(f"`{r}`" for r in sorted(set(result["rejected"]))))
     if plan.get("warnings"):
-        body += "\n\n### Warnings\n" + "\n".join(f"- {w}" for w in plan["warnings"])
+        extra += "\n\n### Warnings\n" + "\n".join(f"- {w}" for w in plan["warnings"])
+    plan["_extra"] = extra
+    body = report.pr_body(cmd.prey.slug, hunt, plan, result["tests"], result["rounds"])
 
     if ctx.dry_run:
         log(f"[dry-run] would push {branch} with {len(written)} files and open PR: {title}")
@@ -225,6 +238,7 @@ def do_consume(ctx: Context, cmd, workdir: Path):
         set_output("pr-url", url)
         t = result["tests"]
         status = "tests ✅" if t.get("passed") else ("tests ⚠️ failing" if t.get("ran") else "no tests run")
+        status += " · wired ✅" if result["wired"] else " · ⚠️ not wired (library only)"
         ctx.say(f"### 🐚 Consumed `{cmd.prey.slug}` → {url}\n\n{plan.get('summary', '')}\n\n"
                 f"{len(written)} files · {status} · {result['rounds']} round(s)\n\n{report.SIGNATURE}")
     return {"branch": branch, "url": url}
