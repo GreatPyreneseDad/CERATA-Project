@@ -69,7 +69,8 @@ Rules of the body:
    it so it is selectable behind a flag or parameter that defaults to CLASSIC. A library nothing calls
    is not a trial. Never delete or silently change existing behaviour.
 5. Write in the host's language and follow the TEST RULES given with the task exactly: CERATA runs
-   those tests itself and feeds failures back to you. Tests must not use the network.
+   those tests itself, together with the host's existing tests (which pin CLASSIC: breaking one that
+   was green fails the trial), and feeds failures back to you. Tests must not use the network.
 6. Scope: only write inside the host repo. Never write under .git/, .github/ or .cerata/.
    Never add CI workflows, install hooks, or code that reads environment secrets or makes network calls
    at import time.
@@ -326,10 +327,16 @@ def _sandbox_prefix() -> Tuple[List[str], str]:
     return [], "unsandboxed"
 
 
-def run_tests(host: Path, written: List[str], timeout: int = 300) -> Dict:
-    tests = [w for w in written if _is_test(w)]
-    if not tests:
-        return {"ran": False, "passed": False, "output": "no test files written"}
+MAX_CLASSIC_TESTS = 40
+
+
+def classic_tests(host: Path) -> List[str]:
+    """The host's own runnable tests (same runners CERATA uses). They pin CLASSIC behaviour."""
+    return [f for f in git_ls(host) if _is_test(f) and "node_modules/" not in f][:MAX_CLASSIC_TESTS]
+
+
+def _run_files(host: Path, tests: List[str], timeout: int = 300) -> Tuple[Dict[str, bool], Dict[str, str], str]:
+    """Run test files in a scratch copy of the host (sandboxed when possible). Per-file pass + output."""
     prefix, mode = _sandbox_prefix()
     work = Path(tempfile.mkdtemp(prefix="cerata-trial-"))
     shutil.copytree(host, work / "repo", ignore=shutil.ignore_patterns(".git"), dirs_exist_ok=True)
@@ -338,20 +345,46 @@ def run_tests(host: Path, written: List[str], timeout: int = 300) -> Dict:
         subprocess.run(["chmod", "-R", "a+rwX", str(work)], capture_output=True)
     env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(work),
            "LANG": "C.UTF-8", "PYTHONPATH": str(repo), "PYTHONDONTWRITEBYTECODE": "1"}
-    outputs, passed = [], True
+    results, outputs = {}, {}
     for t in tests:
         test_cmd = _test_cmd(t)
         cmd = prefix + ["env", "-i"] + [f"{k}={v}" for k, v in env.items()] + test_cmd
         shown = " ".join([Path(test_cmd[0]).name] + test_cmd[1:])
         try:
             r = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=timeout)
-            outputs.append(f"$ {shown}  [{mode}]\n{r.stdout}{r.stderr}")
-            passed &= r.returncode == 0
+            results[t], outputs[t] = r.returncode == 0, f"$ {shown}  [{mode}]\n{r.stdout}{r.stderr}"
         except subprocess.TimeoutExpired:
-            outputs.append(f"$ {shown}\nTIMEOUT after {timeout}s")
-            passed = False
+            results[t], outputs[t] = False, f"$ {shown}\nTIMEOUT after {timeout}s"
     shutil.rmtree(work, ignore_errors=True)
-    return {"ran": True, "passed": passed, "output": "\n\n".join(outputs)[-20000:], "mode": mode}
+    return results, outputs, mode
+
+
+def baseline_tests(host: Path, classic: List[str]) -> Dict[str, bool]:
+    """CLASSIC test results before anything is written."""
+    return _run_files(host, classic)[0] if classic else {}
+
+
+def run_tests(host: Path, written: List[str], timeout: int = 300, classic: Optional[List[str]] = None,
+              baseline: Optional[Dict[str, bool]] = None) -> Dict:
+    """Run the tests the model wrote, plus the host's CLASSIC tests. A CLASSIC test that was green
+    before the consume and is red now is a regression and fails the trial; one already red before
+    is reported but not held against the integration."""
+    classic, baseline = classic or [], baseline or {}
+    own = [w for w in written if _is_test(w) and w not in classic]
+    if not own:
+        return {"ran": False, "passed": False, "output": "no test files written", "files": {}, "regressions": []}
+    results, outputs, mode = _run_files(host, own + classic, timeout)
+    regressions = [t for t in classic if baseline.get(t) and not results.get(t)]
+    already_red = [t for t in classic if t in baseline and not baseline[t]]
+    shown = [outputs[t] for t in own] + [outputs[t] for t in regressions]
+    head = ""
+    if classic:
+        head = (f"CLASSIC tests: {sum(1 for t in classic if results.get(t))}/{len(classic)} green"
+                + (f"; REGRESSIONS (were green, now red): {', '.join(regressions)}" if regressions else "")
+                + (f"; already red before this consume: {', '.join(already_red)}" if already_red else "")
+                + "\n\n")
+    return {"ran": True, "passed": all(results[t] for t in own) and not regressions, "files": results,
+            "regressions": regressions, "output": (head + "\n\n".join(shown))[-20000:], "mode": mode}
 
 
 _NUMBER_CLAIM = re.compile(r"\d+(?:\.\d+)?\s*(?:%|ms\b|µs\b|fps\b|x\b|×|seconds?\b|MB\b)", re.I)
@@ -395,10 +428,15 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
         return {"plan": plan, "written": [], "rejected": [], "tests": {"ran": False}, "rounds": 1,
                 "declined": True, "consumed": files}
     pre_existing = set(git_ls(host))
+    classic = classic_tests(host)
+    baseline = baseline_tests(host, classic)
+    if classic:
+        log(f"CLASSIC baseline: {sum(baseline.values())}/{len(classic)} green")
     state = {"plan": plan, "reply": reply, "rejected": []}
     written, rej = apply_files(host, out_files)
     state["rejected"] += rej
-    tests = run_tests(host, written)
+    test = lambda: run_tests(host, written, classic=classic, baseline=baseline)
+    tests = test()
     rounds = 1
 
     def absorb(text, allow_plan=True):
@@ -424,7 +462,7 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
                                  round=rounds, output=tests["output"][-12000:])}])
             state["reply"] = llm.complete(SYSTEM, messages)
             absorb(state["reply"])
-            tests = run_tests(host, written)
+            tests = test()
             rounds += 1
             spent += 1
 
@@ -443,7 +481,7 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
                              {"role": "user", "content": read_host_files(host, targets) + "\n\n" + WIRE}])
             state["reply"] = llm.complete(SYSTEM, messages)
             absorb(state["reply"])
-            tests = run_tests(host, written)
+            tests = test()
             rounds += 1
             repair_until_green(1)
         else:

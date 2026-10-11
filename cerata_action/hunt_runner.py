@@ -54,6 +54,13 @@ def js_nematocysts(repo: Path, max_candidates: int = 40):
     return out[:max_candidates]
 
 
+# Directory names that never hold nematocysts, wherever they appear (packages/examples/..., editor/js/...).
+NOT_NEMATOCYST_PARTS = {"examples", "example", "demo", "demos", "playground", "playgrounds", "docs", "doc",
+                        "test", "tests", "__tests__", "spec", "bench", "benchmark", "benchmarks", "scripts",
+                        "editor", "vendor", "third_party", "thirdparty", "external", "node_modules", "dist",
+                        "build", "codemirror", "fixtures", "samples", "tools", "utils-build", "perf"}
+
+
 def load_hunt_module(cerata_home: Path):
     """Import tools/hunt.py without its import-time chatter."""
     path = cerata_home / "tools" / "hunt.py"
@@ -155,6 +162,8 @@ def hunt(hunt_mod, prey_path: Path, url: str, info: Optional[Dict],
     found.sort(key=lambda x: x["score"], reverse=True)
     nematocysts = [n for n in found
                    if not n["path"].lower().startswith(NOT_NEMATOCYST_DIRS)
+                   and not set(n["path"].lower().split("/")[:-1]) & NOT_NEMATOCYST_PARTS
+                   and not ("/" not in n["path"] and re.match(r"(build|rollup|webpack|vite|gulpfile|gruntfile|babel)\b", n["path"].lower()))
                    and not n["path"].endswith(("conftest.py", "noxfile.py", "__main__.py"))][:15]
     viability = hunt_mod.determine_viability(coherence)
 
