@@ -71,6 +71,9 @@ Rules of the body:
 5. Write in the host's language and follow the TEST RULES given with the task exactly: CERATA runs
    those tests itself, together with the host's existing tests (which pin CLASSIC: breaking one that
    was green fails the trial), and feeds failures back to you. Tests must not use the network.
+   Existing test files and test helpers are READ-ONLY: edits to them are rejected. If a CLASSIC test
+   fails, your change is wrong, not the test. Do not rewrite core host files wholesale to make
+   something fit; change the smallest surface that wires the new capability in.
 6. Scope: only write inside the host repo. Never write under .git/, .github/ or .cerata/.
    Never add CI workflows, install hooks, or code that reads environment secrets or makes network calls
    at import time.
@@ -119,7 +122,7 @@ If the prey does not fill a real gap, return the plan with an empty nematocysts 
 
 REPAIR = """## Task: REPAIR (round {round})
 
-The tests you wrote failed. Output below. Fix the integration (or the tests, if the tests were wrong).
+Tests failed. Output below. A REGRESSION means you broke CLASSIC behaviour: restore it. Fix the integration (or the tests, if the tests were wrong).
 Reply in the same format: a <plan> block (you may repeat the previous plan) and complete <file> blocks
 for every file you change. Files you do not re-send stay as they are.
 
@@ -271,12 +274,22 @@ def read_host_files(host: Path, paths: List[str]) -> str:
 _LICENSE_NAME = re.compile(r"^(licen[cs]e|copying|notice)([-._].*)?$", re.I)
 
 
-def apply_files(host: Path, files: Dict[str, str]) -> Tuple[List[str], List[str]]:
+_TEST_DIRS = {"tests", "test", "__tests__", "spec", "specs"}
+
+
+def protected_paths(pre_existing) -> set:
+    """Existing tests and test helpers pin CLASSIC. The model may add tests, never edit or replace these."""
+    return {f for f in pre_existing
+            if _is_test(f) or set(f.split("/")[:-1]) & _TEST_DIRS}
+
+
+def apply_files(host: Path, files: Dict[str, str], protected=frozenset()) -> Tuple[List[str], List[str]]:
     written, rejected = [], []
     for rel, content in list(files.items())[:MAX_FILES]:
         target = safe_path(host, rel)
+        norm = str(target.relative_to(host.resolve())) if target is not None and host.resolve() in target.parents else rel
         if (target is None or len(content.encode()) > MAX_FILE_BYTES
-                or _LICENSE_NAME.match(rel.rsplit("/", 1)[-1])):
+                or _LICENSE_NAME.match(rel.rsplit("/", 1)[-1]) or norm in protected):
             rejected.append(rel)
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -428,12 +441,13 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
         return {"plan": plan, "written": [], "rejected": [], "tests": {"ran": False}, "rounds": 1,
                 "declined": True, "consumed": files}
     pre_existing = set(git_ls(host))
+    protected = protected_paths(pre_existing)
     classic = classic_tests(host)
     baseline = baseline_tests(host, classic)
     if classic:
         log(f"CLASSIC baseline: {sum(baseline.values())}/{len(classic)} green")
     state = {"plan": plan, "reply": reply, "rejected": []}
-    written, rej = apply_files(host, out_files)
+    written, rej = apply_files(host, out_files, protected)
     state["rejected"] += rej
     test = lambda: run_tests(host, written, classic=classic, baseline=baseline)
     tests = test()
@@ -447,7 +461,7 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
                 state["plan"] = {**state["plan"], **{k: v for k, v in new_plan.items() if v}}
         except ConsumeError:
             new_files = {p: c for p, c in _FILE.findall(text)}
-        w, rj = apply_files(host, new_files)
+        w, rj = apply_files(host, new_files, protected)
         written = sorted(set(written) | set(w))
         state["rejected"] += rj
         return w

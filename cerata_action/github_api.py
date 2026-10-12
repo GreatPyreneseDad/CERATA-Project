@@ -70,10 +70,10 @@ class GitHub:
         info = self.request("GET", f"/repos/{self.repo}")
         return info.get("default_branch", "main")
 
-    def open_pr(self, head: str, base: str, title: str, body: str) -> Dict:
+    def open_pr(self, head: str, base: str, title: str, body: str, draft: bool = False) -> Dict:
         return self.request("POST", f"/repos/{self.repo}/pulls",
                             {"head": head, "base": base, "title": title, "body": body,
-                             "maintainer_can_modify": True})
+                             "maintainer_can_modify": True, "draft": draft})
 
     def add_labels(self, issue_number: int, labels) -> None:
         try:
