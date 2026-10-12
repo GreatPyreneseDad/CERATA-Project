@@ -63,5 +63,15 @@ class TestClassicGate(unittest.TestCase):
         self.assertEqual(sorted(rej), ["./tests/add.test.mjs", "tests/harness.mjs"])
 
 
+    def test_host_protect_and_guide(self):
+        host = Path(tempfile.mkdtemp())
+        (host / ".cerata").mkdir()
+        (host / ".cerata" / "protect").write_text("src/loop.js\nsrc/core/*.js  # engine core\n\n")
+        (host / ".cerata" / "guide.md").write_text("New features go in src/kit/.")
+        pre = {"src/loop.js", "src/core/a.js", "src/kit/x.js", "README.md"}
+        self.assertEqual(consume.protected_paths(pre, host), {"src/loop.js", "src/core/a.js"})
+        self.assertEqual(consume.host_guide(host), "New features go in src/kit/.")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -277,10 +277,23 @@ _LICENSE_NAME = re.compile(r"^(licen[cs]e|copying|notice)([-._].*)?$", re.I)
 _TEST_DIRS = {"tests", "test", "__tests__", "spec", "specs"}
 
 
-def protected_paths(pre_existing) -> set:
-    """Existing tests and test helpers pin CLASSIC. The model may add tests, never edit or replace these."""
-    return {f for f in pre_existing
-            if _is_test(f) or set(f.split("/")[:-1]) & _TEST_DIRS}
+def protected_paths(pre_existing, host: Optional[Path] = None) -> set:
+    """Read-only to the model: existing tests and test helpers (they pin CLASSIC), plus anything the
+    maintainers list in .cerata/protect (one path or glob per line, # comments)."""
+    import fnmatch
+    out = {f for f in pre_existing if _is_test(f) or set(f.split("/")[:-1]) & _TEST_DIRS}
+    listing = host / ".cerata" / "protect" if host else None
+    if listing and listing.is_file():
+        globs = [l.split("#")[0].strip() for l in listing.read_text(errors="ignore").splitlines()]
+        for g in filter(None, globs):
+            out |= {f for f in pre_existing if fnmatch.fnmatch(f, g) or f == g}
+    return out
+
+
+def host_guide(host: Path, limit: int = 8000) -> str:
+    """Maintainers' rules for consuming into this repo (.cerata/guide.md), given to the model verbatim."""
+    p = host / ".cerata" / "guide.md"
+    return p.read_text(errors="ignore")[:limit] if p.is_file() else ""
 
 
 def apply_files(host: Path, files: Dict[str, str], protected=frozenset()) -> Tuple[List[str], List[str]]:
@@ -424,9 +437,17 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
     lang = host_language(host)
     log(f"host language: {lang}")
     ctx = host_context(host) + "\n\n" + prey_context(prey, slug, hunt, files)
+    guide = host_guide(host)
+    if guide:
+        ctx += ("\n\n### Host rules (from this repo's maintainers, .cerata/guide.md). These override your defaults.\n"
+                + guide)
     if focus:
         ctx += f"\n\n### Operator focus\n{focus}"
 
+    pre_existing = set(git_ls(host))
+    protected = protected_paths(pre_existing, host)
+    if protected:
+        ctx += ("\n\n### Read-only files (writes are rejected)\n" + "\n".join(f"- {p}" for p in sorted(protected)[:60]))
     messages = [{"role": "user", "content": ctx + "\n\n" + SURVEY.format(max_read=MAX_HOST_READ)}]
     reply = llm.complete(SYSTEM, messages)
     to_read = parse_read(reply)
@@ -440,8 +461,6 @@ def metabolize(llm, host: Path, prey: Path, slug: str, hunt: Dict, paths: List[s
     if not plan.get("nematocysts") or not out_files:
         return {"plan": plan, "written": [], "rejected": [], "tests": {"ran": False}, "rounds": 1,
                 "declined": True, "consumed": files}
-    pre_existing = set(git_ls(host))
-    protected = protected_paths(pre_existing)
     classic = classic_tests(host)
     baseline = baseline_tests(host, classic)
     if classic:
