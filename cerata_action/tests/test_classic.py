@@ -51,5 +51,17 @@ class TestClassicGate(unittest.TestCase):
         self.assertTrue(res["wired"])  # add.mjs (existing) was modified
 
 
+    def test_existing_tests_are_read_only(self):
+        host = Path(tempfile.mkdtemp())
+        pre = {"src/a.mjs", "tests/add.test.mjs", "tests/harness.mjs", "app.py", "test_x.py"}
+        prot = consume.protected_paths(pre)
+        self.assertEqual(prot, {"tests/add.test.mjs", "tests/harness.mjs", "test_x.py"})
+        (host / "tests").mkdir()
+        w, rej = consume.apply_files(host, {"tests/harness.mjs": "hacked", "./tests/add.test.mjs": "x",
+                                            "tests/new.test.mjs": "ok", "src/a.mjs": "ok"}, prot)
+        self.assertEqual(sorted(w), ["src/a.mjs", "tests/new.test.mjs"])
+        self.assertEqual(sorted(rej), ["./tests/add.test.mjs", "tests/harness.mjs"])
+
+
 if __name__ == "__main__":
     unittest.main()
