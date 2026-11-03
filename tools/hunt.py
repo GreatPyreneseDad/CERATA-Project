@@ -20,8 +20,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
 
-# Add Rose Glass path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "rose-glass/src"))
+# Rose Glass is optional. Point ROSE_GLASS_SRC at its src/ to use the real lens; otherwise the fallback formula runs.
+if os.environ.get("ROSE_GLASS_SRC"):
+    sys.path.insert(0, os.environ["ROSE_GLASS_SRC"])
 
 try:
     from core.unified_lens import get_lens
@@ -131,8 +132,36 @@ def analyze_code_quality(repo_path: Path) -> Dict:
     return quality
 
 
-def calculate_repo_coherence(structure: Dict, quality: Dict) -> Dict:
-    """Calculate Rose Glass dimensions for repository."""
+def analyze_history(repo_path: Path) -> Dict:
+    """Facts from git history. Works on a shallow clone (depth >= ~50); reports how much it saw."""
+    def git(*args):
+        r = subprocess.run(['git', '-C', str(repo_path)] + list(args), capture_output=True, text=True)
+        return r.stdout.strip() if r.returncode == 0 else ''
+    stamps = [int(x) for x in git('log', '--format=%ct').split() if x.isdigit()]
+    authors = {a for a in git('log', '--format=%ae').splitlines() if a}
+    now = datetime.now().timestamp()
+    shallow = (repo_path / '.git' / 'shallow').exists()
+    span_days = (max(stamps) - min(stamps)) / 86400 if len(stamps) > 1 else 0
+    tags = len([t for t in git('tag').splitlines() if t])
+    return {
+        'commits_seen': len(stamps),
+        'shallow': shallow,
+        'authors_seen': len(authors),
+        'days_since_last_commit': round((now - max(stamps)) / 86400) if stamps else None,
+        'commits_last_90d': sum(1 for t in stamps if now - t < 90 * 86400),
+        'commits_last_365d': sum(1 for t in stamps if now - t < 365 * 86400),
+        'span_days_seen': round(span_days),
+        'tags': tags,
+    }
+
+
+def calculate_repo_coherence(structure: Dict, quality: Dict, history: Optional[Dict] = None) -> Dict:
+    """Rose Glass dimensions for a repository, from what was measured.
+
+    Each dimension is a structural proxy, not a judgment: Ψ from organization, ρ from evidence of care
+    (tests, CI, docs, types), q from recent commit activity, f from ecosystem conventions, τ from the age
+    of the history. λ (adaptation cost) depends on the host and is left to the consume step.
+    """
     
     # Ψ (Internal Consistency) - based on organization and structure
     psi = 0.4
@@ -163,9 +192,16 @@ def calculate_repo_coherence(structure: Dict, quality: Dict) -> Dict:
     if quality['type_hint_count'] > 5:
         rho += 0.05
     
-    # q (Activation) - would need git history, use placeholder
-    # Could be enhanced with git log analysis
-    q = 0.5
+    # q (Activation) - recent commit activity. Saturates: ~1 commit/week over 90d reads as fully alive.
+    # τ (Temporal survival) - how long the visible history spans; saturates at ~3 years.
+    h = history or {}
+    if h.get('commits_seen'):
+        q = min(1.0, h['commits_last_90d'] / 12) * 0.7 + (0.3 if (h.get('days_since_last_commit') or 9999) < 180 else 0.0)
+        tau = min(1.0, h['span_days_seen'] / (3 * 365))
+        if h.get('shallow') and h['span_days_seen'] < 365:
+            tau = max(tau, 0.3)   # a shallow clone truncates the past; don't punish what we didn't fetch
+    else:
+        q, tau = None, None
     
     # f (Belonging) - based on standard structure and ecosystem fit
     f = 0.4
@@ -181,21 +217,24 @@ def calculate_repo_coherence(structure: Dict, quality: Dict) -> Dict:
         f += 0.05
     
     # Calculate coherence using Rose Glass formula
+    q_in = 0.5 if q is None else q   # unknown activity: neutral, and flagged below
     if ROSE_GLASS_AVAILABLE:
         lens = get_lens()
-        coherence = lens.calculate_coherence(psi, rho, q, f)
+        coherence = lens.calculate_coherence(psi, rho, q_in, f)
     else:
         # Fallback calculation
-        q_opt = q / (0.2 + q + (q**2 / 0.8))
+        q_opt = q_in / (0.2 + q_in + (q_in**2 / 0.8))
         coherence = psi + (rho * psi) + q_opt + (f * psi) + (0.15 * rho * q_opt)
         coherence = min(coherence, 4.0)
-    
+
     return {
-        'psi': round(min(psi, 1.0), 3),
-        'rho': round(min(rho, 1.0), 3),
-        'q': round(q, 3),
-        'f': round(min(f, 1.0), 3),
-        'coherence': round(coherence, 3)
+        'psi': round(min(psi, 1.0), 2),
+        'rho': round(min(rho, 1.0), 2),
+        'q': None if q is None else round(q, 2),
+        'f': round(min(f, 1.0), 2),
+        'tau': None if tau is None else round(tau, 2),
+        'coherence': round(coherence, 2),
+        'measured_from': 'structure, source text' + (', git history' if q is not None else '; no git history available (q neutral)'),
     }
 
 
@@ -270,6 +309,10 @@ def determine_viability(coherence: Dict) -> Dict:
         warnings.append("Low accumulated wisdom - untested patterns")
     if coherence['f'] < 0.4:
         warnings.append("Poor ecosystem fit - high adaptation (λ) likely")
+    if coherence.get('q') is None:
+        warnings.append("No git history read - activation (q) unknown, coherence computed with q neutral")
+    elif coherence['q'] < 0.2:
+        warnings.append("Dormant: little or no commit activity in 90 days")
     
     return {
         'viability': viability,
@@ -292,7 +335,7 @@ def hunt(repo_url: str) -> Dict:
         # Clone repo (shallow)
         print("Cloning repository...")
         result = subprocess.run(
-            ['git', 'clone', '--depth', '1', '--quiet', repo_url, tmpdir],
+            ['git', 'clone', '--depth', '200', '--quiet', repo_url, tmpdir],
             capture_output=True, text=True
         )
         
@@ -311,8 +354,11 @@ def hunt(repo_url: str) -> Dict:
         print("Analyzing code quality...")
         quality = analyze_code_quality(repo_path)
         
+        print("Reading history...")
+        history = analyze_history(repo_path)
+
         print("Calculating coherence...")
-        coherence = calculate_repo_coherence(structure, quality)
+        coherence = calculate_repo_coherence(structure, quality, history)
         
         print("Identifying nematocysts...")
         nematocysts = identify_nematocysts(repo_path)
@@ -326,6 +372,7 @@ def hunt(repo_url: str) -> Dict:
             'timestamp': datetime.now().isoformat(),
             'structure': structure,
             'quality': quality,
+            'history': history,
             'coherence': coherence,
             'viability': viability,
             'nematocyst_candidates': nematocysts,
@@ -365,7 +412,8 @@ def print_report(report: Dict):
     c = report['coherence']
     print(f"   Ψ (Consistency): {c['psi']:.3f}")
     print(f"   ρ (Wisdom):      {c['rho']:.3f}")
-    print(f"   q (Activation):  {c['q']:.3f}")
+    print(f"   q (Activation):  {'unknown' if c.get('q') is None else f"{c['q']:.2f}"}")
+    print(f"   τ (Survival):    {'unknown' if c.get('tau') is None else f"{c['tau']:.2f}"}")
     print(f"   f (Belonging):   {c['f']:.3f}")
     print(f"   ─────────────────────")
     print(f"   COHERENCE:       {c['coherence']:.3f}")

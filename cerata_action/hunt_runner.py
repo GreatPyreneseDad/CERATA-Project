@@ -71,7 +71,7 @@ def load_hunt_module(cerata_home: Path):
     return mod
 
 
-def clone(url: str, dest: Path, depth: int = 50) -> Tuple[bool, str]:
+def clone(url: str, dest: Path, depth: int = 200) -> Tuple[bool, str]:
     if not url.startswith(("https://", "http://")):  # local fixture repos in tests
         url = str(Path(url).resolve())
     r = subprocess.run(
@@ -157,7 +157,8 @@ def hunt(hunt_mod, prey_path: Path, url: str, info: Optional[Dict],
          allow_copyleft: bool) -> Dict:
     structure = hunt_mod.analyze_repo_structure(prey_path)
     quality = hunt_mod.analyze_code_quality(prey_path)
-    coherence = hunt_mod.calculate_repo_coherence(structure, quality)
+    history = hunt_mod.analyze_history(prey_path)
+    coherence = hunt_mod.calculate_repo_coherence(structure, quality, history)
     found = hunt_mod.identify_nematocysts(prey_path, max_candidates=40) + js_nematocysts(prey_path)
     found.sort(key=lambda x: x["score"], reverse=True)
     nematocysts = [n for n in found
@@ -184,6 +185,7 @@ def hunt(hunt_mod, prey_path: Path, url: str, info: Optional[Dict],
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "structure": structure,
         "quality": quality,
+        "history": history,
         "coherence": coherence,
         "viability": viability,
         "nematocyst_candidates": nematocysts,

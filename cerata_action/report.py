@@ -21,9 +21,31 @@ Nothing merges itself: every consume lands as a PR for a human to review.
 {SIGNATURE}"""
 
 
+def _fmt(v) -> str:
+    return "—" if v is None else f"{v:.2f}"
+
+
 def _bar(v: float, width: int = 10) -> str:
     n = max(0, min(width, round(v * width)))
     return "█" * n + "░" * (width - n)
+
+
+def _dim_row(name: str, v, note: str) -> str:
+    if v is None:
+        return f"| {name} | `—` | `{'░' * 10}` | {note} |"
+    return f"| {name} | `{v:.2f}` | `{_bar(v)}` | {note} |"
+
+
+def _history_note(h) -> str:
+    if not h or not h.get("commits_seen"):
+        return "no git history read"
+    return f"{h['commits_last_90d']} commits in 90d, last {h['days_since_last_commit']}d ago"
+
+
+def _span_note(h) -> str:
+    if not h or not h.get("commits_seen"):
+        return "no git history read"
+    return f"{h['span_days_seen']}d of history seen" + (" (shallow clone)" if h.get("shallow") else "") + f", {h['authors_seen']} authors"
 
 
 def hunt_markdown(slug: str, r: Dict) -> str:
@@ -31,13 +53,14 @@ def hunt_markdown(slug: str, r: Dict) -> str:
     lines: List[str] = [
         f"### 🎯 HUNT: [`{slug}`](https://github.com/{slug}) @ `{r['commit'][:7]}`",
         "",
-        "| Dim | Reading | |",
-        "|---|---|---|",
-        f"| Ψ consistency | `{c['psi']:.3f}` | `{_bar(c['psi'])}` |",
-        f"| ρ wisdom | `{c['rho']:.3f}` | `{_bar(c['rho'])}` |",
-        f"| q activation | `{c['q']:.3f}` | `{_bar(c['q'])}` placeholder in hunt.py |",
-        f"| f belonging | `{c['f']:.3f}` | `{_bar(c['f'])}` |",
-        f"| **Coherence** | **`{c['coherence']:.3f}`** / 4 | |",
+        "| Dim | Reading | | Measured from |",
+        "|---|---|---|---|",
+        f"| Ψ consistency | `{c['psi']:.2f}` | `{_bar(c['psi'])}` | readme, tests, license, docs, structure |",
+        f"| ρ wisdom | `{c['rho']:.2f}` | `{_bar(c['rho'])}` | tests, CI, docstrings, comments, types |",
+        _dim_row("q activation", c.get("q"), _history_note(r.get("history"))),
+        f"| f belonging | `{c['f']:.2f}` | `{_bar(c['f'])}` | manifests, config, src/ layout |",
+        _dim_row("τ survival", c.get("tau"), _span_note(r.get("history"))),
+        f"| **Coherence** | **`{c['coherence']:.2f}`** / 4 | | Ψ ρ q f; τ and λ reported, not folded in |",
         "",
         f"**Viability: `{v['viability']}`**: {v['recommendation']}",
         "",
@@ -97,7 +120,7 @@ def pr_body(slug: str, hunt: Dict, plan: Dict, tests: Dict, rounds: int) -> str:
 ### Hunt Record
 - **Prey:** https://github.com/{slug} @ `{hunt['commit'][:12]}`
 - **License:** {hunt['license']['note']}
-- **Coherence:** `{c['coherence']:.3f}` (Ψ {c['psi']:.2f} · ρ {c['rho']:.2f} · q {c['q']:.2f} · f {c['f']:.2f}), `{hunt['viability']['viability']}`
+- **Coherence:** `{c['coherence']:.2f}` (Ψ {c['psi']:.2f} · ρ {c['rho']:.2f} · q {_fmt(c.get('q'))} · f {c['f']:.2f} · τ {_fmt(c.get('tau'))}), `{hunt['viability']['viability']}`
 
 ### Nematocysts
 | Nematocyst | Source | Dimension | Purpose |

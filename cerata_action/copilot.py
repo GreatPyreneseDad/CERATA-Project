@@ -33,7 +33,7 @@ def brief(slug: str, hunt: Dict, files: List[str], focus: str) -> str:
 
 **Prey:** https://github.com/{slug} pinned at commit `{hunt['commit']}`
 **License:** {lic['note']} (upstream file: `{lic.get('file') or 'none'}`)
-**Coherence:** `{c['coherence']:.3f}` (Ψ {c['psi']:.2f} · ρ {c['rho']:.2f} · q {c['q']:.2f} · f {c['f']:.2f}), `{hunt['viability']['viability']}`
+**Coherence:** `{c['coherence']:.2f}` (Ψ {c['psi']:.2f} · ρ {c['rho']:.2f} · q {c['q'] if c.get('q') is None else f"{c['q']:.2f}"} · f {c['f']:.2f}), `{hunt['viability']['viability']}`
 
 ### Consume
 {targets}
