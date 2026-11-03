@@ -64,6 +64,31 @@ class BuildTest(unittest.TestCase):
             self.assertEqual(first, hmac.new(b"n0nce", sub["head"].encode(), hashlib.sha256).hexdigest())
             self.assertNotIn("proven", body)
 
+    def test_submit_rebases_onto_moved_default_branch(self):
+        with tempfile.TemporaryDirectory() as t:
+            origin = Path(t) / "origin.git"; seed = Path(t) / "seed"; seed.mkdir()
+            make_host(seed)
+            subprocess.run(["git", "clone", "-q", "--bare", str(seed), str(origin)], check=True)
+            host = Path(t) / "host"
+            subprocess.run(["git", "clone", "-q", str(origin), str(host)], check=True)
+            row = row_for(host)
+            # someone else lands unrelated work on main while we build
+            other = Path(t) / "other"
+            subprocess.run(["git", "clone", "-q", str(origin), str(other)], check=True)
+            (other / "NEWS.md").write_text("moved\n")
+            for c in (["add", "-A"], ["-c", "user.name=o", "-c", "user.email=o@o", "commit", "-q", "-m", "news"], ["push", "-q", "origin", "main"]):
+                subprocess.run(["git", "-C", str(other)] + c, check=True)
+            llm = Scripted(['<read>[]</read>', f'<plan>{{"summary": "fix", "reasoning": "r"}}</plan><file path="src/add.mjs">{FIXED}</file>'])
+            res = build.build(llm, host, row, MANDATE)
+            self.assertTrue(res["repro_pass"])
+            sub = build.submit(host, row, MANDATE, res, token="", dry_run=True, log=lambda *_: None)
+            self.assertTrue((host / "NEWS.md").exists(), "build was not rebased onto the moved branch")
+            msg = subprocess.run(["git", "-C", str(host), "log", "-1", "--format=%B"], capture_output=True, text=True).stdout
+            self.assertIn("Buildup-Nonce: n0nce", msg)
+            parent = subprocess.run(["git", "-C", str(host), "rev-parse", "HEAD~1"], capture_output=True, text=True).stdout.strip()
+            main = subprocess.run(["git", "-C", str(host), "rev-parse", "origin/main"], capture_output=True, text=True).stdout.strip()
+            self.assertEqual(parent, main)
+
     def test_root_scope_and_prefix_rules(self):
         self.assertTrue(build.in_scope("anything/at/all.js", ["./"]))
         self.assertTrue(build.in_scope("src/x.js", ["src"]))

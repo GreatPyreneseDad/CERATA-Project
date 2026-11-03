@@ -198,17 +198,39 @@ def run_repro(host: Path, f: Dict, timeout: int = 300) -> Tuple[bool, str]:
     return needle not in hay, out      # the failure signature must be gone
 
 
+def _has_test_script(pkg: Path) -> bool:
+    try:
+        return bool((json.loads(pkg.read_text()).get("scripts") or {}).get("test"))
+    except (OSError, json.JSONDecodeError):
+        return False
+
+
+def suite_cmds(host: Path, written: Optional[List[str]] = None) -> List[Tuple[Path, List[str]]]:
+    """Every suite a maintainer would run: the root's, and the nearest package.json with a test script above each
+    file we wrote (a monorepo keeps its suites in subdirectories)."""
+    out: List[Tuple[Path, List[str]]] = []
+    seen = set()
+    dirs = [host]
+    for rel in written or []:
+        d = (host / rel).parent
+        while d != host and d != d.parent:
+            if (d / "package.json").exists():
+                dirs.append(d); break
+            d = d.parent
+    for d in dirs:
+        if d in seen:
+            continue
+        seen.add(d)
+        if _has_test_script(d / "package.json"):
+            out.append((d, ["npm", "test", "--silent"]))
+    if not out and (any(host.glob("test*/**/*.py")) or any(host.glob("**/test_*.py"))):
+        out.append((host, ["python3", "-m", "unittest", "discover", "-q"]))
+    return out
+
+
 def suite_cmd(host: Path) -> Optional[List[str]]:
-    pkg = host / "package.json"
-    if pkg.exists():
-        try:
-            if (json.loads(pkg.read_text()).get("scripts") or {}).get("test"):
-                return ["npm", "test", "--silent"]
-        except json.JSONDecodeError:
-            pass
-    if any(host.glob("test*/**/*.py")) or any(host.glob("**/test_*.py")):
-        return ["python3", "-m", "unittest", "discover", "-q"]
-    return None
+    c = suite_cmds(host)
+    return c[0][1] if c else None
 
 
 def install_deps(host: Path, log=print) -> None:
@@ -221,15 +243,20 @@ def install_deps(host: Path, log=print) -> None:
                        cwd=host, capture_output=True, timeout=600)
 
 
-def run_suite(host: Path, timeout: int = 600) -> Tuple[Optional[bool], str]:
-    cmd = suite_cmd(host)
-    if not cmd:
+def run_suite(host: Path, timeout: int = 600, written: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
+    cmds = suite_cmds(host, written)
+    if not cmds:
         return None, "(no test suite detected)"
-    try:
-        r = subprocess.run(cmd, cwd=host, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        return False, f"$ {' '.join(cmd)}\n(timed out)"
-    return r.returncode == 0, f"$ {' '.join(cmd)}\n{r.stdout[-3000:]}{r.stderr[-3000:]}\n(exit {r.returncode})"
+    ok, out = True, []
+    for d, cmd in cmds:
+        where = str(d.relative_to(host)) or "."
+        try:
+            r = subprocess.run(cmd, cwd=d, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            ok = False; out.append(f"[{where}] $ {' '.join(cmd)}\n(timed out)"); continue
+        ok = ok and r.returncode == 0
+        out.append(f"[{where}] $ {' '.join(cmd)}\n{r.stdout[-2000:]}{r.stderr[-2000:]}\n(exit {r.returncode})")
+    return ok, "\n\n".join(out)
 
 
 # ------------------------------------------------------------------ build --
@@ -276,7 +303,7 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
     log(f"wrote {written}; rejected {rejected}")
     rounds = 1
     repro_pass, repro_out = run_repro(host, f)
-    suite_pass, suite_out = run_suite(host)
+    suite_pass, suite_out = run_suite(host, written=written)
     while (not repro_pass or suite_pass is False) and rounds <= max_repair:
         rounds += 1
         output = f"REPRO: {'pass' if repro_pass else 'FAIL'}\n{repro_out}\n\nSUITE: {suite_pass}\n{suite_out}"
@@ -292,7 +319,7 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
         written = sorted(set(written) | set(w2))
         rejected = r2
         repro_pass, repro_out = run_repro(host, f)
-        suite_pass, suite_out = run_suite(host)
+        suite_pass, suite_out = run_suite(host, written=written)
     return {"plan": plan, "written": written, "rejected": rejected, "declined": False, "rounds": rounds,
             "repro_pass": repro_pass, "repro_out": repro_out, "suite_pass": suite_pass, "suite_out": suite_out}
 
@@ -345,29 +372,52 @@ def commit_message(plan: Dict, mandate: Dict) -> str:
     return f"{subject}\n\nBuilt by CERATA under a buildup.network mandate.\n\nBuildup-Mandate: {mandate['jti']}\nBuildup-Nonce: {mandate['nonce']}\n"
 
 
+class BaseMoved(BuildError):
+    """The default branch moved under us and the build no longer applies cleanly."""
+
+
 def submit(host: Path, row: Dict, mandate: Dict, result: Dict, token: str, dry_run: bool, log=print,
-           prey_slug: str = "") -> Dict:
+           prey_slug: str = "", pr_number: Optional[int] = None) -> Dict:
     fid = row["id"]
     branch = f"cerata/{fid[:8]}"
-    git(host, "checkout", "-q", "-b", branch)
+    git(host, "checkout", "-q", "-B", branch)
     git(host, "add", "-A", "--", *result["written"])
     msg = commit_message(result["plan"], mandate)
     r = subprocess.run(["git", "-C", str(host), "-c", "user.name=CERATA", "-c", "user.email=cerata@buildup.network",
                         "commit", "-q", "-F", "-"], input=msg, capture_output=True, text=True)
     if r.returncode != 0:
         raise BuildError(f"commit: {r.stderr.strip()[-300:]}")
+    # The judges evaluate the build merged onto the CURRENT default branch. Rebase onto it now, so the PR's diff is
+    # what we mean and nothing newer looks deleted; if it no longer applies, the caller rebuilds from a fresh clone.
+    base = git(host, "symbolic-ref", "-q", "refs/remotes/origin/HEAD", check=False).replace("refs/remotes/origin/", "") or None
+    if base:
+        git(host, "fetch", "-q", "origin", base, token=token, check=False)
+    rb = subprocess.run(["git", "-C", str(host), "-c", "user.name=CERATA", "-c", "user.email=cerata@buildup.network",
+                         "rebase", "-q", f"origin/{base}"], capture_output=True, text=True) if base else None
+    if rb and rb.returncode != 0:
+        subprocess.run(["git", "-C", str(host), "rebase", "--abort"], capture_output=True)
+        raise BaseMoved(f"{base} moved; build no longer applies cleanly: {rb.stderr.strip()[-200:]}")
+    if base and git(host, "rev-parse", "HEAD~1", check=False) != git(host, "rev-parse", f"origin/{base}"):   # landed on newer work: re-check
+        ok, out = run_repro(host, row["f"])
+        sp, sout = run_suite(host, written=result["written"])
+        result = {**result, "repro_pass": ok, "repro_out": out, "suite_pass": sp, "suite_out": sout}
+        if not ok or sp is False:
+            raise BaseMoved(f"after rebasing onto {base}: repro {'passes' if ok else 'FAILS'}, suite {sp}")
     head = git(host, "rev-parse", "HEAD")
     body = pr_body(result["plan"], result, mandate, head, fid, prey_slug)
     title = commit_message(result["plan"], mandate).splitlines()[0]
     if dry_run:
         log(f"[dry run] would push {branch} @ {head[:7]} and open PR:\n{title}\n\n{body}")
         return {"branch": branch, "head": head, "pr_url": None}
-    git(host, "push", "-q", "-u", "origin", branch, token=token)
+    git(host, "push", "-q", "-f", "-u", "origin", branch, token=token)
     gh = GitHub(token, repo_slug(row["f"]["location"]["repo"]))
-    base = git(host, "rev-parse", "--abbrev-ref", "origin/HEAD").split("/", 1)[-1]
-    pr = gh.open_pr(head=branch, base=base, title=title, body=body)
-    log(f"PR: {pr.get('html_url')}")
-    return {"branch": branch, "head": head, "pr_url": pr.get("html_url")}
+    if pr_number:
+        pr = gh.request("PATCH", f"/repos/{gh.repo}/pulls/{pr_number}", {"title": title, "body": body})
+        log(f"PR updated: {pr.get('html_url')} @ {head[:7]}")
+    else:
+        pr = gh.open_pr(head=branch, base=base, title=title, body=body)
+        log(f"PR: {pr.get('html_url')}")
+    return {"branch": branch, "head": head, "pr_url": pr.get("html_url"), "pr_number": pr.get("number")}
 
 
 # ------------------------------------------------------------------ driver --
@@ -380,8 +430,13 @@ def load_state() -> Dict:
 
 
 def save_state(s: Dict) -> None:
+    """Holds each submitted mandate's nonce (for the one retry round), so: private to this user."""
     STATE.parent.mkdir(parents=True, exist_ok=True)
     STATE.write_text(json.dumps(s, indent=1))
+    try:
+        STATE.chmod(0o600)
+    except OSError:
+        pass
 
 
 def eligible(rows: List[Dict], state: Dict) -> List[Dict]:
@@ -400,10 +455,12 @@ def eligible(rows: List[Dict], state: Dict) -> List[Dict]:
 
 
 def build_one(llm, row: Dict, token: str, dry_run: bool, note: str = "", prey: Optional[Tuple[str, List[str]]] = None,
-              max_repair: int = 2, log=print, taker=take) -> Dict:
+              max_repair: int = 2, log=print, taker=take, mandate: Optional[Dict] = None, pr_number: Optional[int] = None,
+              _attempt: int = 1) -> Dict:
     fid = row["id"]
-    mandate = taker(fid)
-    log(f"mandate {mandate['jti']} scope {mandate['scope_paths']} on {mandate['repo']}")
+    if mandate is None:
+        mandate = taker(fid)
+        log(f"mandate {mandate['jti']} scope {mandate['scope_paths']} on {mandate['repo']}")
     work = Path(tempfile.mkdtemp(prefix="cerata-build-"))
     try:
         host = work / "host"
@@ -437,10 +494,62 @@ def build_one(llm, row: Dict, token: str, dry_run: bool, note: str = "", prey: O
         if result["suite_pass"] is False:
             log("suite red; not submitting")
             return {"id": fid, "status": "suite_red", "plan": result["plan"], "out": result.get("suite_out", "")[-800:]}
-        sub = submit(host, row, mandate, result, token, dry_run, log, prey_slug)
-        return {"id": fid, "status": "submitted", **sub, "plan": result["plan"]}
+        try:
+            sub = submit(host, row, mandate, result, token, dry_run, log, prey_slug, pr_number)
+        except BaseMoved as e:
+            if _attempt >= 2:
+                raise
+            log(f"{e}; rebuilding from a fresh clone")
+            return build_one(llm, row, token, dry_run, note, prey, max_repair, log, taker, mandate, pr_number, _attempt + 1)
+        return {"id": fid, "status": "submitted", **sub, "plan": result["plan"],
+                "mandate": {k: mandate[k] for k in ("jti", "nonce", "repo", "scope_paths", "expires_at") if k in mandate}}
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+# ---------------------------------------------------- learn from the judges --
+
+def judge_verdict(token: str, repo_url: str, pr_number: int) -> Optional[str]:
+    """The panel's latest comment on our PR, if it chose none; else None."""
+    gh = GitHub(token, repo_slug(repo_url))
+    try:
+        comments = gh.request("GET", f"/repos/{gh.repo}/issues/{pr_number}/comments?per_page=100")
+    except Exception:
+        return None
+    for c in reversed(comments or []):
+        b = c.get("body") or ""
+        if "**judge**" in b and "chosen: none" in b:
+            return b
+        if "**judge**" in b and "merged as" in b:
+            return None
+    return None
+
+
+def retry_rejected(llm, rows: List[Dict], state: Dict, token: str, dry_run: bool, log=print) -> List[Tuple[str, Dict]]:
+    """A build the panel rejected, on a pick still open, under a mandate still valid, gets one more round that
+    starts from the judges' reasons. One retry, not a loop: the mandate's expiry and the state file bound it."""
+    out = []
+    open_ids = {r["id"]: r for r in rows if not r.get("judged")}
+    for fid, prior in list(state.get("built", {}).items()):
+        if prior.get("status") != "submitted" or prior.get("retried") or fid not in open_ids or not prior.get("pr_number"):
+            continue
+        m = prior.get("mandate")
+        if not m or not m.get("nonce"):
+            continue
+        row = open_ids[fid]
+        verdict = judge_verdict(token, row["f"]["location"]["repo"], prior["pr_number"])
+        if not verdict:
+            continue
+        log(f"{fid[:8]}: panel chose none; one more round from their reasons")
+        note = ("The panel rejected the previous attempt on this finding. Their reasons, verbatim; address every one, "
+                "start from the current default branch, and say in the note what changed since:\n\n" + verdict[-6000:])
+        try:
+            res = build_one(llm, row, token, dry_run, note, None, log=log, mandate=m, pr_number=prior["pr_number"])
+        except BuildError as e:
+            res = {"id": fid, "status": "error", "error": str(e)}
+        res["retried"] = True
+        out.append((fid, res))
+    return out
 
 
 def main(argv: List[str], llm, token: str, dry_run: bool = False, log=print) -> int:
@@ -464,6 +573,13 @@ def main(argv: List[str], llm, token: str, dry_run: bool = False, log=print) -> 
         if not targets:
             log("no such finding on the board"); return 2
     rc = 0
+    if auto:
+        for fid, res in retry_rejected(llm, rows, state, token, dry_run, log):
+            keep = {k: v for k, v in res.items() if k != "plan"}
+            state["built"][fid] = {**state["built"][fid], **keep, "retried": True}
+            if not dry_run:
+                save_state(state)
+            log(json.dumps({k: v for k, v in res.items() if k in ("id", "status", "pr_url", "error")}))
     for row in targets:
         try:
             res = build_one(llm, row, token, dry_run, note, prey, log=log)
