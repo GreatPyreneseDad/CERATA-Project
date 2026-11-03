@@ -119,7 +119,7 @@ class BuildError(RuntimeError):
     pass
 
 
-BUILD_VERSION = 6   # bump when the harness changes enough that a past decline deserves another attempt
+BUILD_VERSION = 7   # bump when the harness changes enough that a past decline deserves another attempt
 
 _EDIT = re.compile(r'<edit\s+path="([^"]+)">(.*?)</edit>', re.S)
 _PAIR = re.compile(r"<find>\n?(.*?)\n?</find>\s*<replace>\n?(.*?)\n?</replace>", re.S)
