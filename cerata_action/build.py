@@ -119,7 +119,7 @@ class BuildError(RuntimeError):
     pass
 
 
-BUILD_VERSION = 5   # bump when the harness changes enough that a past decline deserves another attempt
+BUILD_VERSION = 6   # bump when the harness changes enough that a past decline deserves another attempt
 
 _EDIT = re.compile(r'<edit\s+path="([^"]+)">(.*?)</edit>', re.S)
 _PAIR = re.compile(r"<find>\n?(.*?)\n?</find>\s*<replace>\n?(.*?)\n?</replace>", re.S)
@@ -540,7 +540,8 @@ def eligible(rows: List[Dict], state: Dict) -> List[Dict]:
     for r in rows:
         prior = state.get("built", {}).get(r["id"])
         retry = prior and ((prior.get("status") == "error" and "denied" not in str(prior.get("error", "")))   # infrastructure: retry
-                           or (prior.get("status") == "error" and time.time() - prior.get("at", 0) > 3600)  # a denied push: hourly, it needs a human
+                           or (prior.get("status") == "error" and (time.time() - prior.get("at", 0) > 3600       # a denied push: hourly, it needs a human
+                                                                   or prior.get("build_version", 0) < BUILD_VERSION))  # or at once after a harness change
                            or (prior.get("status") in ("declined", "repro_fails", "suite_red")   # the harness got better since
                                and prior.get("build_version", 0) < BUILD_VERSION))
         if r.get("judged") or r.get("verified") != "red" or (prior and not retry):
