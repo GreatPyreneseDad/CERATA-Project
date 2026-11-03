@@ -107,11 +107,14 @@ def board() -> List[Dict]:
         return json.loads(r.read())
 
 
-def take(finding_id: str, run=subprocess.run) -> Dict:
-    """Sign a pick and open the sealed mandate through the Tatemae CLI (keys never enter this process)."""
-    r = run(["node", TATEMAE_CLI, "take", finding_id, "--json"], capture_output=True, text=True, timeout=60)
+def take(finding_id: str, run=subprocess.run, renew: bool = False) -> Dict:
+    """Sign a pick and open the sealed mandate through the Tatemae CLI (keys never enter this process).
+    renew: this pair already holds the pick but lost the nonce (new machine); ask for a fresh mandate."""
+    r = run(["node", TATEMAE_CLI, "take", finding_id, "--json"] + (["--renew"] if renew else []), capture_output=True, text=True, timeout=60)
     if r.returncode != 0:
-        raise BuildError(f"take failed: {(r.stderr or r.stdout).strip()[-300:]}")
+        err = (r.stderr or r.stdout).strip()
+        first = next((l for l in err.splitlines() if "Error" in l or "already" in l), err[-300:])
+        raise BuildError(f"take failed: {first[-300:]}")
     m = json.loads(r.stdout.strip().splitlines()[-1])
     for k in ("jti", "nonce", "repo", "scope_paths"):
         if k not in m:
@@ -459,7 +462,22 @@ def build_one(llm, row: Dict, token: str, dry_run: bool, note: str = "", prey: O
               _attempt: int = 1) -> Dict:
     fid = row["id"]
     if mandate is None:
-        mandate = taker(fid)
+        try:
+            mandate = taker(fid)
+        except BuildError as e:
+            if "already picked" not in str(e):
+                raise
+            # We hold this pick but have no record of it (state wiped). Renew the mandate and, if our PR exists,
+            # carry the judges' reasons into this round.
+            mandate = taker(fid, renew=True)
+            pr = existing_pr(token, row["f"]["location"]["repo"], f"cerata/{fid[:8]}")
+            if pr:
+                pr_number = pr
+                verdict = judge_verdict(token, row["f"]["location"]["repo"], pr)
+                if verdict:
+                    note = (note + "\n\n" if note else "") + ("The panel rejected a previous attempt on this finding. Their reasons, verbatim; address every one, "
+                            "start from the current default branch, and say in the note what changed since:\n\n" + verdict[-6000:])
+            log(f"renewed mandate for {fid[:8]}" + (f", updating PR #{pr}" if pr else ""))
         log(f"mandate {mandate['jti']} scope {mandate['scope_paths']} on {mandate['repo']}")
     work = Path(tempfile.mkdtemp(prefix="cerata-build-"))
     try:
@@ -508,6 +526,15 @@ def build_one(llm, row: Dict, token: str, dry_run: bool, note: str = "", prey: O
 
 
 # ---------------------------------------------------- learn from the judges --
+
+def existing_pr(token: str, repo_url: str, branch: str) -> Optional[int]:
+    gh = GitHub(token, repo_slug(repo_url))
+    try:
+        prs = gh.request("GET", f"/repos/{gh.repo}/pulls?state=open&head={gh.repo.split('/')[0]}:{branch}")
+    except Exception:
+        return None
+    return (prs or [{}])[0].get("number") if prs else None
+
 
 def judge_verdict(token: str, repo_url: str, pr_number: int) -> Optional[str]:
     """The panel's latest comment on our PR, if it chose none; else None."""
