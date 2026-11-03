@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -526,7 +527,8 @@ def eligible(rows: List[Dict], state: Dict) -> List[Dict]:
     out = []
     for r in rows:
         prior = state.get("built", {}).get(r["id"])
-        retry = prior and (prior.get("status") == "error"                                        # infrastructure: always retry
+        retry = prior and ((prior.get("status") == "error" and "denied" not in str(prior.get("error", "")))   # infrastructure: retry
+                           or (prior.get("status") == "error" and time.time() - prior.get("at", 0) > 3600)  # a denied push: hourly, it needs a human
                            or (prior.get("status") in ("declined", "repro_fails", "suite_red")   # the harness got better since
                                and prior.get("build_version", 0) < BUILD_VERSION))
         if r.get("judged") or r.get("verified") != "red" or (prior and not retry):
@@ -696,7 +698,7 @@ def main(argv: List[str], llm, token: str, dry_run: bool = False, log=print) -> 
             log(f"error: {e}")
             if "already picked" in str(e):
                 res["status"] = "already_taken"
-        state.setdefault("built", {})[row["id"]] = {**{k: v for k, v in res.items() if k != "plan"}, "build_version": BUILD_VERSION}
+        state.setdefault("built", {})[row["id"]] = {**{k: v for k, v in res.items() if k != "plan"}, "build_version": BUILD_VERSION, "at": time.time()}
         if not dry_run:
             save_state(state)
         log(json.dumps({k: v for k, v in res.items() if k in ("id", "status", "pr_url", "error")}))
