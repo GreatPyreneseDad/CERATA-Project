@@ -113,7 +113,7 @@ def take(finding_id: str, run=subprocess.run, renew: bool = False) -> Dict:
     r = run(["node", TATEMAE_CLI, "take", finding_id, "--json"] + (["--renew"] if renew else []), capture_output=True, text=True, timeout=60)
     if r.returncode != 0:
         err = (r.stderr or r.stdout).strip()
-        first = next((l for l in err.splitlines() if "Error" in l or "already" in l), err[-300:])
+        first = next((l for l in err.splitlines() if re.match(r"^\w*Error: ", l)), err[-300:])
         raise BuildError(f"take failed: {first[-300:]}")
     m = json.loads(r.stdout.strip().splitlines()[-1])
     for k in ("jti", "nonce", "repo", "scope_paths"):
