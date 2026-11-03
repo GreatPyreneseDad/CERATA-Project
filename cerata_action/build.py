@@ -119,7 +119,7 @@ class BuildError(RuntimeError):
     pass
 
 
-BUILD_VERSION = 4   # bump when the harness changes enough that a past decline deserves another attempt
+BUILD_VERSION = 5   # bump when the harness changes enough that a past decline deserves another attempt
 
 _EDIT = re.compile(r'<edit\s+path="([^"]+)">(.*?)</edit>', re.S)
 _PAIR = re.compile(r"<find>\n?(.*?)\n?</find>\s*<replace>\n?(.*?)\n?</replace>", re.S)
@@ -396,6 +396,7 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
     rounds = 1
     repro_pass, repro_out = (False, "(nothing was written: every edit was rejected)") if not written else run_repro(host, f)
     suite_pass, suite_out = run_suite(host, written=written) if written else (None, "")
+    log(f"round 1: repro {'pass' if repro_pass else 'FAIL'}, suite {suite_pass}" + ("" if repro_pass else f"; repro tail: {repro_out[-700:]!r}"))
     while (not repro_pass or suite_pass is False) and rounds <= max_repair:
         rounds += 1
         output = f"REPRO: {'pass' if repro_pass else 'FAIL'}\n{repro_out}\n\nSUITE: {suite_pass}\n{suite_out}"
@@ -412,6 +413,7 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
         rejected = er2 + r2
         repro_pass, repro_out = run_repro(host, f)
         suite_pass, suite_out = run_suite(host, written=written)
+        log(f"round {rounds}: repro {'pass' if repro_pass else 'FAIL'}, suite {suite_pass}; rejected {rejected}" + ("" if repro_pass else f"; repro tail: {repro_out[-700:]!r}"))
     return {"plan": plan, "written": written, "rejected": rejected, "declined": False, "rounds": rounds,
             "repro_pass": repro_pass, "repro_out": repro_out, "suite_pass": suite_pass, "suite_out": suite_out}
 
