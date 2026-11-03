@@ -389,8 +389,9 @@ def eligible(rows: List[Dict], state: Dict) -> List[Dict]:
     titles_merged = {r["bounty"]["title"] for r in rows if r.get("judged") and r.get("bounty")}
     out = []
     for r in rows:
-        if r.get("judged") or r.get("verified") != "red" or r["id"] in state.get("built", {}):
-            continue
+        prior = state.get("built", {}).get(r["id"])
+        if r.get("judged") or r.get("verified") != "red" or (prior and prior.get("status") != "error"):
+            continue      # an infrastructure error (unknown pair, clone, network) is retried next run
         deps = (r.get("bounty") or {}).get("depends_on") or []
         if any(d not in titles_merged for d in deps):
             continue

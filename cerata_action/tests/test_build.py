@@ -92,9 +92,10 @@ class BuildTest(unittest.TestCase):
             {"id": "d", "verified": "red", "judged": False, "bounty": {"title": "D", "depends_on": ["B"]}},
             {"id": "e", "verified": "red", "judged": False, "bounty": {"title": "E", "depends_on": ["Z"]}},
             {"id": "f", "verified": "red", "judged": False},
+            {"id": "g", "verified": "red", "judged": False},
         ]
-        ids = [r["id"] for r in build.eligible(rows, {"built": {"f": {}}})]
-        self.assertEqual(ids, ["a", "d"])
+        ids = [r["id"] for r in build.eligible(rows, {"built": {"f": {"status": "submitted"}, "g": {"status": "error"}}})]
+        self.assertEqual(ids, ["a", "d", "g"])
 
 
 if __name__ == "__main__":
