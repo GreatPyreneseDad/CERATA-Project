@@ -119,7 +119,7 @@ class BuildError(RuntimeError):
     pass
 
 
-BUILD_VERSION = 3   # bump when the harness changes enough that a past decline deserves another attempt
+BUILD_VERSION = 4   # bump when the harness changes enough that a past decline deserves another attempt
 
 _EDIT = re.compile(r'<edit\s+path="([^"]+)">(.*?)</edit>', re.S)
 _PAIR = re.compile(r"<find>\n?(.*?)\n?</find>\s*<replace>\n?(.*?)\n?</replace>", re.S)
@@ -376,7 +376,17 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
                  {"role": "user", "content": C.read_host_files(host, to_read, whole=(focus,), budget=READ_BUDGET) + "\n\n" + BUILD + "\n\n" + C.TEST_RULES[lang]}]
     reply = llm.complete(SYSTEM, messages)
     plan, out_files, edit_rejects = parse_reply(host, reply)
+    if not plan.get("declined") and not out_files and not edit_rejects:
+        # Not a decline, not a change: the reply missed the format. One round to say so before giving up.
+        log(f"reply had a plan but no <file>/<edit> blocks; tail: {reply[-400:]!r}")
+        messages += [{"role": "assistant", "content": reply},
+                     {"role": "user", "content": "Your reply contained no <file> or <edit> blocks, so nothing was changed. Reply again in the exact "
+                      "format: one <plan> block, then <edit path=\"...\"><find>...</find><replace>...</replace></edit> blocks "
+                      "(or <file path=\"...\"> full contents). If you mean to decline, put \"declined\": \"why\" in the plan."}]
+        reply = llm.complete(SYSTEM, messages)
+        plan, out_files, edit_rejects = parse_reply(host, reply)
     if plan.get("declined") or (not out_files and not edit_rejects):
+        log(f"declined: {plan.get('declined') or 'no change produced'}; reply tail: {reply[-300:]!r}")
         return {"plan": plan, "written": [], "rejected": edit_rejects, "declined": True, "rounds": 1, "repro_pass": False}
 
     install_deps(host, log)
