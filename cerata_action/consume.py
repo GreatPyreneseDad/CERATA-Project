@@ -264,16 +264,22 @@ def safe_path(host: Path, rel: str) -> Optional[Path]:
     return target
 
 
-def read_host_files(host: Path, paths: List[str]) -> str:
-    out, budget = [], MAX_HOST_READ_CHARS
+def read_host_files(host: Path, paths: List[str], whole: Tuple[str, ...] = (), budget: int = MAX_HOST_READ_CHARS) -> str:
+    """Files for the model. `whole` paths are delivered complete whatever the budget (the file a finding points at
+    must never arrive cut off); the rest share what is left, and a truncated file SAYS it is truncated."""
+    out = []
     for rel in paths:
         p = safe_path(host, rel)
         if p is None or not p.is_file():
             out.append(f'<host_file path="{rel}">(does not exist)</host_file>')
             continue
-        text = p.read_text(errors="ignore")[:max(budget, 0)]
+        full = p.read_text(errors="ignore")
+        if rel.strip().lstrip("./") in whole or len(full) <= max(budget, 0):
+            text, note = full, ""
+        else:
+            text, note = full[:max(budget, 0)], f" truncated=\"true\" shown_chars=\"{max(budget, 0)}\" total_chars=\"{len(full)}\""
         budget -= len(text)
-        out.append(f'<host_file path="{rel}">\n{text}\n</host_file>')
+        out.append(f'<host_file path="{rel}"{note}>\n{text}\n</host_file>' + ("\n(this file was cut off; use <edit> blocks for it, never a full replacement)" if note else ""))
     return "\n\n".join(out)
 
 

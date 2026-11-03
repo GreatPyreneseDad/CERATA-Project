@@ -36,6 +36,7 @@ INGEST = os.environ.get("TATEMAE_INGEST", "https://nnnlitdzggyyboyqismx.supabase
 BOARD = os.environ.get("TATEMAE_BOARD", INGEST.replace("/ingest", "/picks") + "?json")
 TATEMAE_CLI = os.environ.get("TATEMAE_CLI", str(Path.home() / "tatemae" / "cli" / "tatemae.js"))
 STATE = Path(os.environ.get("CERATA_HOME_STATE", str(Path.home() / ".cerata"))) / "built.json"
+READ_BUDGET = int(os.environ.get("CERATA_READ_CHARS", "240000"))   # shared across surveyed files; the finding's file is exempt
 
 SYSTEM = """You are CERATA, a builder pair on buildup.network. A human and you act as one identity.
 
@@ -88,7 +89,20 @@ create or fully replace (complete contents, no diffs, no placeholders). Only pat
 ...complete contents...
 </file>
 
-If the finding cannot be satisfied within scope, return a plan with "declined": "why" and no files."""
+For an existing file, prefer EDITS to a full replacement. Each <find> must match the current file exactly once
+(copy it verbatim, including indentation); its <replace> takes its place. Several pairs per file are fine:
+
+<edit path="relative/path">
+<find>
+exact current text
+</find>
+<replace>
+new text
+</replace>
+</edit>
+
+A file you were shown truncated may only be changed with <edit>. If the finding cannot be satisfied within scope,
+return a plan with "declined": "why" and no files."""
 
 REPAIR = """## Task: REPAIR (round {round})
 
@@ -102,6 +116,44 @@ file you change (files you do not re-send stay as they are). A failing existing 
 
 class BuildError(RuntimeError):
     pass
+
+
+BUILD_VERSION = 3   # bump when the harness changes enough that a past decline deserves another attempt
+
+_EDIT = re.compile(r'<edit\s+path="([^"]+)">(.*?)</edit>', re.S)
+_PAIR = re.compile(r"<find>\n?(.*?)\n?</find>\s*<replace>\n?(.*?)\n?</replace>", re.S)
+
+
+def apply_edits(host: Path, text: str) -> Tuple[Dict[str, str], List[str]]:
+    """Turn <edit> blocks into full new file contents (so scope and protection checks see whole files).
+    A <find> that matches zero or several times rejects that file with a reason the model gets back."""
+    files, rejected = {}, []
+    for rel, body in _EDIT.findall(text):
+        rel = rel.strip()
+        p = C.safe_path(host, rel)
+        if p is None or not p.is_file():
+            rejected.append(f"{rel}: edit target does not exist"); continue
+        cur = files.get(rel) or p.read_text(errors="ignore")
+        pairs = _PAIR.findall(body)
+        if not pairs:
+            rejected.append(f"{rel}: edit block without find/replace pairs"); continue
+        ok = True
+        for find, repl in pairs:
+            n = cur.count(find)
+            if n != 1:
+                rejected.append(f"{rel}: <find> matched {n} times, needs exactly 1: {find[:80]!r}"); ok = False; break
+            cur = cur.replace(find, repl, 1)
+        if ok:
+            files[rel] = cur if cur.endswith("\n") else cur + "\n"
+    return files, rejected
+
+
+def parse_reply(host: Path, text: str) -> Tuple[Dict, Dict[str, str], List[str]]:
+    plan, files = C.parse_output(text)
+    edited, rejected = apply_edits(host, text)
+    for rel, content in edited.items():
+        files.setdefault(rel, content)      # a full <file> for the same path wins; it is the more explicit statement
+    return plan, files, rejected
 
 
 # ---------------------------------------------------------------- network --
@@ -316,19 +368,23 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
     reply = llm.complete(SYSTEM, messages)
     to_read = C.parse_read(reply)
     log(f"survey: reading {to_read}")
+    focus = f["location"]["path"].strip().lstrip("./")
+    if focus not in [t.strip().lstrip("./") for t in to_read]:
+        to_read = [focus] + to_read
     messages += [{"role": "assistant", "content": reply},
-                 {"role": "user", "content": C.read_host_files(host, to_read) + "\n\n" + BUILD + "\n\n" + C.TEST_RULES[lang]}]
+                 {"role": "user", "content": C.read_host_files(host, to_read, whole=(focus,), budget=READ_BUDGET) + "\n\n" + BUILD + "\n\n" + C.TEST_RULES[lang]}]
     reply = llm.complete(SYSTEM, messages)
-    plan, out_files = C.parse_output(reply)
-    if plan.get("declined") or not out_files:
-        return {"plan": plan, "written": [], "rejected": [], "declined": True, "rounds": 1, "repro_pass": False}
+    plan, out_files, edit_rejects = parse_reply(host, reply)
+    if plan.get("declined") or (not out_files and not edit_rejects):
+        return {"plan": plan, "written": [], "rejected": edit_rejects, "declined": True, "rounds": 1, "repro_pass": False}
 
     install_deps(host, log)
     written, rejected = apply_in_scope(host, out_files, mandate["scope_paths"], protected)
+    rejected = edit_rejects + rejected
     log(f"wrote {written}; rejected {rejected}")
     rounds = 1
-    repro_pass, repro_out = run_repro(host, f)
-    suite_pass, suite_out = run_suite(host, written=written)
+    repro_pass, repro_out = (False, "(nothing was written: every edit was rejected)") if not written else run_repro(host, f)
+    suite_pass, suite_out = run_suite(host, written=written) if written else (None, "")
     while (not repro_pass or suite_pass is False) and rounds <= max_repair:
         rounds += 1
         output = f"REPRO: {'pass' if repro_pass else 'FAIL'}\n{repro_out}\n\nSUITE: {suite_pass}\n{suite_out}"
@@ -337,12 +393,12 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
         messages += [{"role": "assistant", "content": reply},
                      {"role": "user", "content": REPAIR.format(round=rounds, output=output[-12000:])}]
         reply = llm.complete(SYSTEM, messages)
-        p2, more = C.parse_output(reply)
+        p2, more, er2 = parse_reply(host, reply)
         if p2:
             plan.update(p2)
         w2, r2 = apply_in_scope(host, more, mandate["scope_paths"], protected)
         written = sorted(set(written) | set(w2))
-        rejected = r2
+        rejected = er2 + r2
         repro_pass, repro_out = run_repro(host, f)
         suite_pass, suite_out = run_suite(host, written=written)
     return {"plan": plan, "written": written, "rejected": rejected, "declined": False, "rounds": rounds,
@@ -470,8 +526,11 @@ def eligible(rows: List[Dict], state: Dict) -> List[Dict]:
     out = []
     for r in rows:
         prior = state.get("built", {}).get(r["id"])
-        if r.get("judged") or r.get("verified") != "red" or (prior and prior.get("status") != "error"):
-            continue      # an infrastructure error (unknown pair, clone, network) is retried next run
+        retry = prior and (prior.get("status") == "error"                                        # infrastructure: always retry
+                           or (prior.get("status") in ("declined", "repro_fails", "suite_red")   # the harness got better since
+                               and prior.get("build_version", 0) < BUILD_VERSION))
+        if r.get("judged") or r.get("verified") != "red" or (prior and not retry):
+            continue
         deps = (r.get("bounty") or {}).get("depends_on") or []
         if any(d not in titles_merged for d in deps):
             continue
@@ -637,7 +696,7 @@ def main(argv: List[str], llm, token: str, dry_run: bool = False, log=print) -> 
             log(f"error: {e}")
             if "already picked" in str(e):
                 res["status"] = "already_taken"
-        state.setdefault("built", {})[row["id"]] = {k: v for k, v in res.items() if k != "plan"}
+        state.setdefault("built", {})[row["id"]] = {**{k: v for k, v in res.items() if k != "plan"}, "build_version": BUILD_VERSION}
         if not dry_run:
             save_state(state)
         log(json.dumps({k: v for k, v in res.items() if k in ("id", "status", "pr_url", "error")}))

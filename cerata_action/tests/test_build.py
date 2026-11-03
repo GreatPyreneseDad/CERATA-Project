@@ -89,6 +89,38 @@ class BuildTest(unittest.TestCase):
             main = subprocess.run(["git", "-C", str(host), "rev-parse", "origin/main"], capture_output=True, text=True).stdout.strip()
             self.assertEqual(parent, main)
 
+    def test_edits_apply_exactly_once_and_reject_ambiguity(self):
+        with tempfile.TemporaryDirectory() as t:
+            host = Path(t) / "repo"; host.mkdir(); make_host(host)
+            row = row_for(host)
+            llm = Scripted([
+                '<read>["src/add.mjs"]</read>',
+                '<plan>{"summary": "fix operator", "reasoning": "one char"}</plan>'
+                '<edit path="src/add.mjs"><find>a - b</find><replace>a + b</replace></edit>'
+                '<edit path="README.md"><find>host</find><replace>pwned</replace></edit>'
+                '<edit path="package.json"><find>"</find><replace>x</replace></edit>',
+            ])
+            res = build.build(llm, host, row, MANDATE)
+            self.assertTrue(res["repro_pass"], res.get("repro_out"))
+            self.assertEqual(res["written"], ["src/add.mjs"])
+            self.assertEqual((host / "src" / "add.mjs").read_text(), FIXED)
+            self.assertTrue(any("README.md" in r and "scope" in r for r in res["rejected"]), res["rejected"])
+            self.assertTrue(any("package.json" in r and "matched" in r for r in res["rejected"]), res["rejected"])
+            self.assertEqual((host / "README.md").read_text(), "host\n")
+
+    def test_finding_file_delivered_whole_and_truncation_labelled(self):
+        with tempfile.TemporaryDirectory() as t:
+            host = Path(t); (host / "big.txt").write_text("x" * 5000); (host / "focus.txt").write_text("y" * 5000)
+            from cerata_action import consume as C
+            out = C.read_host_files(host, ["big.txt", "focus.txt"], whole=("focus.txt",), budget=1000)
+            self.assertIn('truncated="true"', out.split("focus.txt")[0])
+            self.assertIn("y" * 5000, out)
+
+    def test_eligible_retries_declines_from_an_older_harness(self):
+        rows = [{"id": "a", "verified": "red", "judged": False}, {"id": "b", "verified": "red", "judged": False}]
+        st = {"built": {"a": {"status": "declined", "build_version": build.BUILD_VERSION - 1}, "b": {"status": "declined", "build_version": build.BUILD_VERSION}}}
+        self.assertEqual([r["id"] for r in build.eligible(rows, st)], ["a"])
+
     def test_root_scope_and_prefix_rules(self):
         self.assertTrue(build.in_scope("anything/at/all.js", ["./"]))
         self.assertTrue(build.in_scope("src/x.js", ["src"]))
