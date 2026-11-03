@@ -31,6 +31,10 @@ types. Tests use `node:test` and `node:assert/strict` only (no jest/vitest/playw
 (e.g. `import { x } from '../src/foo/bar.ts'`). The tested module must not import npm packages, DOM
 or browser APIs; keep those in a thin adapter the tests don't load. CERATA runs each with
 `node --test <file>` (Node 22+, type stripping) from the repo root, without `npm install`.""",
+    "rust": """TEST RULES (host is Rust): tests are `#[test]` functions in the module they test (`#[cfg(test)] mod tests`) or
+in `tests/*.rs`, using only the standard test harness and crates the host already depends on. CERATA runs
+`cargo test <filter>` from the crate root. Never edit Cargo.toml to add dependencies. Keep unsafe code's invariants
+explicit in a comment; a bounds check that replaces unchecked indexing is a correct fix, not a slowdown to argue about.""",
     "javascript": """TEST RULES (host is JavaScript): write the capability as a self-contained ES module. Tests use
 `node:test` and `node:assert/strict` only, are named `*.test.mjs`, and import the module under test with
 an explicit relative extension. The tested module must not import npm packages or browser APIs.
@@ -39,7 +43,7 @@ CERATA runs each with `node --test <file>` from the repo root, without `npm inst
 
 
 def host_language(host: Path) -> str:
-    counts = {"python": 0, "typescript": 0, "javascript": 0}
+    counts = {"python": 0, "typescript": 0, "javascript": 0, "rust": 0}
     for f in git_ls(host):
         if "node_modules/" in f or f.endswith(".d.ts"):
             continue
@@ -49,6 +53,8 @@ def host_language(host: Path) -> str:
             counts["typescript"] += 1
         elif f.endswith((".js", ".jsx", ".mjs")):
             counts["javascript"] += 1
+        elif f.endswith(".rs"):
+            counts["rust"] += 1
     return max(counts, key=counts.get) if any(counts.values()) else "python"
 
 SYSTEM = """You are CERATA, a code predator that grows by metabolizing open-source code into a host repository.

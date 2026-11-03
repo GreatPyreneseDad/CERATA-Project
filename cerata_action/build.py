@@ -186,21 +186,23 @@ def run_repro(host: Path, f: Dict, timeout: int = 300) -> Tuple[bool, str]:
     """True when the finding's command now PASSES (the defect is gone)."""
     rp = f["evidence"]["repro"]
     wd = host / (rp.get("workdir") or ".")
+    timeout = max(timeout, int(rp.get("timeout_s") or 0))
+    env = cargo_env(host) if (host / "Cargo.toml").exists() else None
     out = ""
     if rp.get("setup"):
-        s = subprocess.run(["bash", "-lc", rp["setup"]], cwd=wd, capture_output=True, text=True, timeout=timeout)
+        s = subprocess.run(["bash", "-lc", rp["setup"]], cwd=wd, capture_output=True, text=True, timeout=timeout, env=env)
         out += f"$ {rp['setup']}\n{s.stdout}{s.stderr}\n"
         if s.returncode != 0:
             return False, out + f"(setup exited {s.returncode})"
     try:
-        r = subprocess.run(["bash", "-lc", rp["cmd"]], cwd=wd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(["bash", "-lc", rp["cmd"]], cwd=wd, capture_output=True, text=True, timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         return False, out + f"$ {rp['cmd']}\n(timed out after {timeout}s)"
     out += f"$ {rp['cmd']}\n{r.stdout[-4000:]}{r.stderr[-4000:]}\n(exit {r.returncode})"
     exp = rp.get("expect", "nonzero_exit")
     if exp == "nonzero_exit":
         return r.returncode == 0, out
-    needle = rp.get("value", "")
+    needle = rp.get("needle", rp.get("value", ""))
     hay = r.stdout if exp == "stdout_contains" else r.stderr
     return needle not in hay, out      # the failure signature must be gone
 
@@ -232,12 +234,22 @@ def suite_cmds(host: Path, written: Optional[List[str]] = None) -> List[Tuple[Pa
             out.append((d, ["npm", "test", "--silent"]))
     if not out and (any(host.glob("test*/**/*.py")) or any(host.glob("**/test_*.py"))):
         out.append((host, ["python3", "-m", "unittest", "discover", "-q"]))
+    if not out and (host / "Cargo.toml").exists():
+        out.append((host, ["cargo", "test", "--quiet"]))
     return out
 
 
 def suite_cmd(host: Path) -> Optional[List[str]]:
     c = suite_cmds(host)
     return c[0][1] if c else None
+
+
+def cargo_env(host: Path) -> Dict[str, str]:
+    """One target dir per repository, outside the clone, so the second cargo build is incremental, not minutes."""
+    origin = subprocess.run(["git", "-C", str(host), "remote", "get-url", "origin"], capture_output=True, text=True).stdout.strip() or str(host)
+    key = re.sub(r"[^a-z0-9]+", "_", re.sub(r"^https?://", "", origin).lower())
+    cache = Path(os.environ.get("CERATA_CACHE", str(Path.home() / ".cache" / "cerata"))) / "target" / key
+    return {**os.environ, "CARGO_TARGET_DIR": str(cache), "CARGO_TERM_COLOR": "never"}
 
 
 def install_deps(host: Path, log=print) -> None:
@@ -248,6 +260,9 @@ def install_deps(host: Path, log=print) -> None:
     if req.exists():
         subprocess.run(["python3", "-m", "pip", "install", "-q", "--break-system-packages", "-r", str(req)],
                        cwd=host, capture_output=True, timeout=600)
+    if (host / "Cargo.toml").exists():
+        log("cargo fetch")
+        subprocess.run(["cargo", "fetch", "--quiet"], cwd=host, capture_output=True, timeout=900, env=cargo_env(host))
 
 
 def run_suite(host: Path, timeout: int = 600, written: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
@@ -255,10 +270,13 @@ def run_suite(host: Path, timeout: int = 600, written: Optional[List[str]] = Non
     if not cmds:
         return None, "(no test suite detected)"
     ok, out = True, []
+    env = cargo_env(host) if (host / "Cargo.toml").exists() else None
+    if env:
+        timeout = max(timeout, 1800)
     for d, cmd in cmds:
         where = str(d.relative_to(host)) or "."
         try:
-            r = subprocess.run(cmd, cwd=d, capture_output=True, text=True, timeout=timeout)
+            r = subprocess.run(cmd, cwd=d, capture_output=True, text=True, timeout=timeout, env=env)
         except subprocess.TimeoutExpired:
             ok = False; out.append(f"[{where}] $ {' '.join(cmd)}\n(timed out)"); continue
         ok = ok and r.returncode == 0
