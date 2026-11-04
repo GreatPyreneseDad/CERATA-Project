@@ -59,3 +59,26 @@ class OverseeDry(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_file_reviews_files_only_marked_unfiled_review_prs(monkeypatch):
+    from cerata_action import oversee as O
+    prs = [
+        {"html_url": "https://github.com/o/r/pull/1", "title": "proposal: Help center review: 2 issues", "head": {"ref": "review/helpcenter-abc"},
+         "body": "x " + O.REVIEW_MARK, "base": {"sha": "b1"}},
+        {"html_url": "https://github.com/o/r/pull/2", "title": "proposal: already filed", "head": {"ref": "review/helpcenter-def"},
+         "body": O.REVIEW_MARK, "base": {"sha": "b2"}},
+        {"html_url": "https://github.com/o/r/pull/3", "title": "proposal: not a review", "head": {"ref": "proposal/x-r1"},
+         "body": O.REVIEW_MARK, "base": {"sha": "b3"}},
+        {"html_url": "https://github.com/o/r/pull/4", "title": "unmarked", "head": {"ref": "review/y"}, "body": "no mark", "base": {"sha": "b4"}},
+    ]
+    filed = []
+    monkeypatch.setattr(O, "gh", lambda token, method, path, body=None: prs)
+    monkeypatch.setattr(O, "get_json", lambda url: [{"pr_url": "https://github.com/o/r/pull/2"}])
+    monkeypatch.setattr(O, "file_signed", lambda keys_home, claims: filed.append(claims) or "pid-1")
+    monkeypatch.delenv("OVERSEER_DRY", raising=False)
+    assert O.file_reviews("https://github.com/o/r.git", "t", "/k") == 1
+    assert [c["pr_url"] for c in filed] == ["https://github.com/o/r/pull/1"]
+    assert filed[0]["title"] == "Help center review: 2 issues" and filed[0]["base_commit"] == "b1"
+    filed.clear()
+    assert O.file_reviews("https://github.com/o/r.git", "t", "/k", dry=True) == 0 and not filed

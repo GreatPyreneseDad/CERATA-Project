@@ -194,19 +194,51 @@ Each bounty's acceptance command should be `{goal['acceptance']} --only <n>` for
             raise
         pr = (gh(token, "GET", f"/repos/{s}/pulls?state=open&head={s.split('/')[0]}:{branch}") or [{}])[0]
     desc = f"Round {n} toward: {goal['title']}. {len(failing)} acceptance checks still fail; details in {path}."
+    pid = file_signed(keys_home, {"repo_url": repo_url, "title": title, "description": desc, "pr_url": pr.get("html_url"), "base_commit": base})
+    log(f"filed round {n}: {pr.get('html_url')} → proposal {pid}")
+    return pid
+
+
+def file_signed(keys_home: str, claims: Dict) -> Optional[str]:
+    """Sign a proposal with this overseer's pair key and post it to the ledger. Returns the proposal event id."""
     js = ("import { signJws, post } from " + json.dumps(CLI) + "; import { readFileSync } from 'node:fs'; import { randomBytes } from 'node:crypto';"
           "const k = JSON.parse(readFileSync(process.env.TATEMAE_HOME + '/keys.json', 'utf8')); const now = Math.floor(Date.now()/1000);"
           "const a = JSON.parse(process.argv[1]);"
           "const t = signJws({ privateJwk: k.privateJwk, header: { typ: 'buildup-proposal+jwt' }, claims: { ...a, sub: k.pair_id, iat: now, exp: now + 600, jti: randomBytes(8).toString('hex') } });"
           "console.log(JSON.stringify(await post({ type: 'proposal_filed', proposal_token: t })));")
-    args = json.dumps({"repo_url": repo_url, "title": title, "description": desc, "pr_url": pr.get("html_url"), "base_commit": base})
-    r = subprocess.run(["node", "--input-type=module", "-e", js, args], capture_output=True, text=True,
+    r = subprocess.run(["node", "--input-type=module", "-e", js, json.dumps(claims)], capture_output=True, text=True,
                        env={**os.environ, "TATEMAE_HOME": keys_home})
     if r.returncode != 0:
         raise RuntimeError(f"proposal_filed failed: {(r.stderr or r.stdout)[-300:]}")
-    pid = json.loads(r.stdout.strip().splitlines()[-1]).get("proposal_event_id")
-    log(f"filed round {n}: {pr.get('html_url')} → proposal {pid}")
-    return pid
+    return json.loads(r.stdout.strip().splitlines()[-1]).get("proposal_event_id")
+
+
+REVIEW_MARK = "<!-- buildup-review -->"
+
+
+def file_reviews(repo_url: str, token: str, keys_home: str, dry: bool = False) -> int:
+    """The judge's reviewers (Argon and Grok in a browser) leave their agreed findings as a reference PR from a review/
+    branch, marked with REVIEW_MARK. The judge holds the model keys but no pair key; this overseer holds the pair key.
+    File each such PR as a proposal, once."""
+    s = slug(repo_url); filed = 0
+    try:
+        prs = gh(token, "GET", f"/repos/{s}/pulls?state=open&per_page=50") or []
+        known = {p.get("pr_url") for p in get_json(f"{PICKS}?proposals")}
+    except Exception as e:
+        log(f"reviews on {s}: could not list ({e})"); return 0
+    for pr in prs:
+        if not str(pr.get("head", {}).get("ref", "")).startswith("review/") or REVIEW_MARK not in (pr.get("body") or ""):
+            continue
+        if pr.get("html_url") in known:
+            continue
+        title = str(pr.get("title", "")).removeprefix("proposal: ")
+        claims = {"repo_url": repo_url, "title": title, "pr_url": pr["html_url"], "base_commit": pr.get("base", {}).get("sha"),
+                  "description": f"Found and cross-confirmed by the network's reviewers in a browser; details in {pr['html_url']}."}
+        if dry or os.environ.get("OVERSEER_DRY") == "1":
+            log(f"[dry] would file review {pr['html_url']}"); continue
+        pid = file_signed(keys_home, claims); filed += 1
+        log(f"filed review {pr['html_url']} → proposal {pid}")
+    return filed
 
 
 def say(token: str, repo_url: str, pr_number: Optional[int], st: Dict, text: str) -> None:
@@ -336,6 +368,10 @@ def main(argv: List[str]) -> int:
     if "--all-goals" in argv:
         rc = 0
         for r in [repo] + network_repos(repo, token):
+            try:
+                file_reviews(r, token, keys_home, dry="--dry-run" in argv)
+            except Exception as e:
+                log(f"reviews failed for {r}: {e}"); rc = 1
             for gpath, gpr in discover_goals(r, token):
                 try:
                     tick(r, gpath, token, keys_home, int(pr) if pr and r == repo else gpr, dry="--dry-run" in argv)
