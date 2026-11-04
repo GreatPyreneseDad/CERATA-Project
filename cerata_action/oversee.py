@@ -210,7 +210,9 @@ Each bounty's acceptance command should be `{goal['acceptance']} --only <n>` for
 
 
 def say(token: str, repo_url: str, pr_number: Optional[int], st: Dict, text: str) -> None:
-    """One comment per state change on the goal's tracking PR. Silence otherwise."""
+    """One comment per state change on the goal's tracking PR. Silence otherwise. A dry run never writes to GitHub."""
+    if os.environ.get("OVERSEER_DRY") == "1":
+        log(f"[dry] would comment on #{pr_number}: {text[:160]}"); return
     if not pr_number or st.get("said") == text:
         return
     try:
@@ -308,6 +310,8 @@ def main(argv: List[str]) -> int:
     repo = opt("--repo"); goal = opt("--goal"); pr = opt("--track-pr")
     token = os.environ.get("OVERSEER_GITHUB_TOKEN") or os.environ.get("CERATA_GITHUB_TOKEN", "")
     keys_home = os.environ.get("OVERSEER_HOME", str(Path.home() / ".overseer"))
+    if "--dry-run" in argv:
+        os.environ["OVERSEER_DRY"] = "1"
     if not repo or not token or (not goal and "--all-goals" not in argv):
         print("usage: python -m cerata_action oversee --repo <url> (--goal <path in repo> [--track-pr <n>] | --all-goals)  (needs OVERSEER_GITHUB_TOKEN)")
         return 2

@@ -24,5 +24,12 @@ class OverseeArgs(unittest.TestCase):
             self.assertEqual(oversee.main(["--repo", "https://github.com/o/r.git"]), 2)
 
 
+class OverseeDry(unittest.TestCase):
+    def test_dry_run_never_comments(self):
+        with mock.patch.dict("os.environ", {"OVERSEER_DRY": "1"}), mock.patch.object(oversee, "gh") as gh, redirect_stdout(io.StringIO()):
+            oversee.say("t", "https://github.com/o/r.git", 10, {"said": ""}, "Done.")
+        gh.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
