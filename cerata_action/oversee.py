@@ -286,6 +286,21 @@ def tick(repo_url: str, goal_path: str, token: str, keys_home: str, track_pr: Op
         shutil.rmtree(work, ignore_errors=True)
 
 
+def network_repos(home_url: str, token: str) -> List[str]:
+    """Other repos the network drives, listed by the home repo in goals/network.json: {"repos": [clone urls]}."""
+    work = Path(tempfile.mkdtemp(prefix="overseer-net-"))
+    try:
+        if subprocess.run(["git"] + auth_args(token) + ["clone", "-q", "--depth", "1", home_url, str(work / "h")], capture_output=True).returncode:
+            return []
+        try:
+            repos = json.loads((work / "h" / "goals" / "network.json").read_text()).get("repos", [])
+        except (OSError, json.JSONDecodeError):
+            return []
+        return [r for r in repos if isinstance(r, str) and key(r) != key(home_url)]
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def discover_goals(repo_url: str, token: str) -> List[Tuple[str, Optional[int]]]:
     """Every goals/*/goal.json on main, with its track_pr if the file names one."""
     work = Path(tempfile.mkdtemp(prefix="overseer-ls-"))
@@ -317,11 +332,12 @@ def main(argv: List[str]) -> int:
         return 2
     if "--all-goals" in argv:
         rc = 0
-        for gpath, gpr in discover_goals(repo, token):
-            try:
-                tick(repo, gpath, token, keys_home, int(pr) if pr else gpr, dry="--dry-run" in argv)
-            except Exception as e:
-                log(f"tick failed for {gpath}: {e}"); rc = 1
+        for r in [repo] + network_repos(repo, token):
+            for gpath, gpr in discover_goals(r, token):
+                try:
+                    tick(r, gpath, token, keys_home, int(pr) if pr and r == repo else gpr, dry="--dry-run" in argv)
+                except Exception as e:
+                    log(f"tick failed for {r} {gpath}: {e}"); rc = 1
         return rc
     try:
         tick(repo, goal, token, keys_home, int(pr) if pr else None, dry="--dry-run" in argv)
