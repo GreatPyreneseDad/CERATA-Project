@@ -282,6 +282,24 @@ def tick(repo_url: str, goal_path: str, token: str, keys_home: str, track_pr: Op
         shutil.rmtree(work, ignore_errors=True)
 
 
+def discover_goals(repo_url: str, token: str) -> List[Tuple[str, Optional[int]]]:
+    """Every goals/*/goal.json on main, with its track_pr if the file names one."""
+    work = Path(tempfile.mkdtemp(prefix="overseer-ls-"))
+    try:
+        if subprocess.run(["git"] + auth_args(token) + ["clone", "-q", "--depth", "1", repo_url, str(work / "h")], capture_output=True).returncode:
+            return []
+        out = []
+        for gj in sorted((work / "h" / "goals").glob("*/goal.json")):
+            try:
+                g = json.loads(gj.read_text()); pr = g.get("track_pr")
+            except (OSError, json.JSONDecodeError):
+                pr = None
+            out.append((f"goals/{gj.parent.name}/goal.json", int(pr) if pr else None))
+        return out
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def main(argv: List[str]) -> int:
     def opt(name, default=None):
         return argv[argv.index(name) + 1] if name in argv else default
@@ -291,6 +309,14 @@ def main(argv: List[str]) -> int:
     if not repo or not goal or not token:
         print("usage: python -m cerata_action oversee --repo <url> --goal <path in repo> [--track-pr <n>]  (needs OVERSEER_GITHUB_TOKEN)")
         return 2
+    if "--all-goals" in argv:
+        rc = 0
+        for gpath, gpr in discover_goals(repo, token):
+            try:
+                tick(repo, gpath, token, keys_home, int(pr) if pr else gpr, dry="--dry-run" in argv)
+            except Exception as e:
+                log(f"tick failed for {gpath}: {e}"); rc = 1
+        return rc
     try:
         tick(repo, goal, token, keys_home, int(pr) if pr else None, dry="--dry-run" in argv)
         return 0
