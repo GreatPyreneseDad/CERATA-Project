@@ -214,6 +214,8 @@ def say(token: str, repo_url: str, pr_number: Optional[int], st: Dict, text: str
     if not pr_number or st.get("said") == text:
         return
     try:
+        if gh(token, "GET", f"/repos/{slug(repo_url)}/pulls/{pr_number}").get("state") == "closed":
+            st["said"] = text; return      # the goal's PR is closed: nothing to tell it (avoids repeats after a state wipe)
         gh(token, "POST", f"/repos/{slug(repo_url)}/issues/{pr_number}/comments", {"body": f"**overseer**\n\n{text}"})
         st["said"] = text
     except Exception as e:
@@ -306,8 +308,8 @@ def main(argv: List[str]) -> int:
     repo = opt("--repo"); goal = opt("--goal"); pr = opt("--track-pr")
     token = os.environ.get("OVERSEER_GITHUB_TOKEN") or os.environ.get("CERATA_GITHUB_TOKEN", "")
     keys_home = os.environ.get("OVERSEER_HOME", str(Path.home() / ".overseer"))
-    if not repo or not goal or not token:
-        print("usage: python -m cerata_action oversee --repo <url> --goal <path in repo> [--track-pr <n>]  (needs OVERSEER_GITHUB_TOKEN)")
+    if not repo or not token or (not goal and "--all-goals" not in argv):
+        print("usage: python -m cerata_action oversee --repo <url> (--goal <path in repo> [--track-pr <n>] | --all-goals)  (needs OVERSEER_GITHUB_TOKEN)")
         return 2
     if "--all-goals" in argv:
         rc = 0
