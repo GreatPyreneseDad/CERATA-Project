@@ -6,6 +6,9 @@ import sys
 
 def main() -> int:
     args = sys.argv[1:]
+    if args and args[0] == "oversee":
+        from cerata_action import oversee
+        return oversee.main(args[1:])
     if not args or args[0] in ("-h", "--help") or args[0] != "build":
         print(__doc__.strip())
         print("\n  build <finding-id> [--prey owner/repo [path ...]] [--note '...'] [--dry-run]\n  build --auto\n"
