@@ -578,7 +578,11 @@ def build_one(llm, row: Dict, token: str, dry_run: bool, note: str = "", prey: O
     work = Path(tempfile.mkdtemp(prefix="cerata-build-"))
     try:
         host = work / "host"
-        r = subprocess.run(["git", "clone", "-q", "--depth", "50", row["f"]["location"]["repo"], str(host)],
+        auth = []
+        if token and "github.com" in row["f"]["location"]["repo"]:   # private repos on the network need the token to clone
+            import base64
+            auth = ["-c", "http.https://github.com/.extraheader=AUTHORIZATION: basic " + base64.b64encode(f"x-access-token:{token}".encode()).decode()]
+        r = subprocess.run(["git"] + auth + ["clone", "-q", "--depth", "50", row["f"]["location"]["repo"], str(host)],
                            capture_output=True, text=True, timeout=300)
         if r.returncode != 0:
             raise BuildError(f"clone: {r.stderr[-300:]}")
