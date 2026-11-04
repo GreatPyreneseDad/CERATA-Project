@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# vendored from buildup sandbox/run.sh @ 1852c20 — keep in sync; buildup/goals/sandbox is its referee.
+# vendored from buildup sandbox/run.sh — keep in sync; buildup/goals/sandbox is its referee.
 # sandbox/run.sh — containment runner for builders' repros and the judge's evaluation builds.
 #
 #   sandbox/run.sh <workdir> -- <cmd> [args...]
@@ -7,7 +7,8 @@
 # The child runs with <workdir> as cwd and as the only writable location, in new user, mount, pid and network
 # namespaces (no network). Secret-shaped environment variables are removed, paths in SANDBOX_HIDE (colon-separated)
 # read as absent/empty, SANDBOX_TIMEOUT seconds (default 900) of wall clock and SANDBOX_MEM megabytes (default 2048)
-# of address space are enforced. Stdout, stderr and the exit code are the child's. Files written under <workdir> stay.
+# of address space are enforced. SANDBOX_NET=1 keeps the host network (dependency installs only); everything else stays
+# offline. Stdout, stderr and the exit code are the child's. Files written under <workdir> stay.
 # Needs util-linux unshare and setpriv, GNU timeout, and unprivileged user namespaces.
 set -u
 
@@ -65,5 +66,7 @@ exit $?
 EOF
 )
 
-exec env "${SCRUB[@]}" unshare --map-root-user --mount --net --pid --fork --mount-proc \
+NS=(--map-root-user --mount --net --pid --fork --mount-proc)
+[ "${SANDBOX_NET:-0}" = 1 ] && NS=(--map-root-user --mount --pid --fork --mount-proc)
+exec env "${SCRUB[@]}" unshare "${NS[@]}" \
   bash -c "$INNER" sandbox "$WD" "${SANDBOX_HIDE:-}" "$TMO" "$MEM" "$@"

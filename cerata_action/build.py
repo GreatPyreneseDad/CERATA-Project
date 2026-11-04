@@ -263,17 +263,28 @@ def sandbox_enabled(log=print) -> bool:
     return bool(_SANDBOX_OK)
 
 
-def boxed(host: Path, wd: Path, script: str, timeout: int, env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
+def boxed(host: Path, wd: Path, script: str, timeout: int, env: Optional[Dict[str, str]] = None, net: bool = False) -> subprocess.CompletedProcess:
     """Run a shell script with cwd wd; inside the sandbox, the clone (host) is the only writable place."""
     if not sandbox_enabled():
         return subprocess.run(["bash", "-lc", script], cwd=wd, capture_output=True, text=True, timeout=timeout, env=env)
     base = dict(env or os.environ); home0 = os.environ.get("HOME", str(Path.home()))
     h = host / ".cerata-home"; h.mkdir(exist_ok=True)
+    ex = host / ".git" / "info" / "exclude"     # never stageable, never in a survey listing
+    if ex.parent.is_dir() and ".cerata-*" not in (ex.read_text() if ex.exists() else ""):
+        with ex.open("a") as fh:
+            fh.write("\n.cerata-*\n")
     benv = {**base, "HOME": str(h), "npm_config_cache": str(h / ".npm"),
             "CARGO_HOME": base.get("CARGO_HOME", f"{home0}/.cargo"), "RUSTUP_HOME": base.get("RUSTUP_HOME", f"{home0}/.rustup"),
             "PYTHONUSERBASE": base.get("PYTHONUSERBASE", f"{home0}/.local"), "CARGO_NET_OFFLINE": "true",
             "SANDBOX_HIDE": ":".join([f"{home0}/.ssh", f"{home0}/.git-credentials", f"{home0}/.gitconfig", f"{home0}/.config/gh"]),
             "SANDBOX_TIMEOUT": str(timeout), "SANDBOX_MEM": os.environ.get("SANDBOX_MEM", "8192")}
+    py = host / ".cerata-py"   # python deps live in the clone: the root is read-only in the box
+    benv["PYTHONPATH"] = ":".join(x for x in (str(py), base.get("PYTHONPATH", "")) if x)
+    benv["PATH"] = ":".join(x for x in (str(py / "bin"), base.get("PATH", "")) if x)
+    if net:
+        benv["SANDBOX_NET"] = "1"      # dependency installs only
+    else:
+        benv.pop("SANDBOX_NET", None)
     if "CARGO_TARGET_DIR" in benv and not str(benv["CARGO_TARGET_DIR"]).startswith(str(host)):
         benv["CARGO_TARGET_DIR"] = str(host / ".cerata-target")   # the outside cache is read-only in the box; see with_target
     return subprocess.run(["bash", str(SANDBOX_RUN), str(host), "--", "bash", "-c", 'cd -- "$1" || exit 126; eval "$2"', "boxed", str(wd), script],
@@ -384,8 +395,11 @@ def install_deps(host: Path, log=print) -> None:
             boxed(host, d, "npm rebuild --silent", 600)
     req = host / "requirements.txt"
     if req.exists():
-        subprocess.run(["python3", "-m", "pip", "install", "-q", "--break-system-packages", "-r", str(req)],
-                       cwd=host, capture_output=True, timeout=600)
+        if sandbox_enabled(log):       # setup.py and build backends are the repo's code: install boxed, into the clone
+            boxed(host, host, "python3 -m pip install -q --no-input --disable-pip-version-check --target .cerata-py -r requirements.txt", 600, net=True)
+        else:
+            subprocess.run(["python3", "-m", "pip", "install", "-q", "--break-system-packages", "-r", str(req)],
+                           cwd=host, capture_output=True, timeout=600)
     if (host / "Cargo.toml").exists():
         log("cargo fetch")
         subprocess.run(["cargo", "fetch", "--quiet"], cwd=host, capture_output=True, timeout=900, env=cargo_env(host))
