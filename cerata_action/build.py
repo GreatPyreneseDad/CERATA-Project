@@ -22,6 +22,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -233,22 +234,91 @@ def finding_context(row: Dict, mandate: Dict) -> str:
     return "\n".join(lines)
 
 
+# ----------------------------------------------------------- containment --
+# A finding's setup and repro, and the repo's own test suite, are other people's code. Run them through the same
+# runner the judge uses: no network, read-only root, writes only inside the clone, secret-shaped env stripped.
+# CERATA_SANDBOX=auto (default) boxes when this kernel allows unprivileged user namespaces (the network VM does;
+# GitHub's hosted runners usually don't, and are throwaway machines anyway); =on requires it; =off disables it.
+SANDBOX_RUN = Path(__file__).resolve().parent / "sandbox_run.sh"
+_SANDBOX_OK: Optional[bool] = None
+
+
+def sandbox_enabled(log=print) -> bool:
+    global _SANDBOX_OK
+    mode = os.environ.get("CERATA_SANDBOX", "auto")
+    if mode == "off":
+        return False
+    if _SANDBOX_OK is None:
+        probe = Path(tempfile.mkdtemp(prefix="cerata-probe-"))
+        try:
+            r = subprocess.run(["bash", str(SANDBOX_RUN), str(probe), "--", "true"], capture_output=True, text=True, timeout=30)
+            _SANDBOX_OK = r.returncode == 0
+        except Exception:
+            _SANDBOX_OK = False
+        finally:
+            shutil.rmtree(probe, ignore_errors=True)
+        log("sandbox: on" if _SANDBOX_OK else "sandbox: unavailable on this machine (no unprivileged user namespaces); running unboxed")
+    if mode == "on" and not _SANDBOX_OK:
+        raise BuildError("CERATA_SANDBOX=on but the sandbox runner does not work here")
+    return bool(_SANDBOX_OK)
+
+
+def boxed(host: Path, wd: Path, script: str, timeout: int, env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
+    """Run a shell script with cwd wd; inside the sandbox, the clone (host) is the only writable place."""
+    if not sandbox_enabled():
+        return subprocess.run(["bash", "-lc", script], cwd=wd, capture_output=True, text=True, timeout=timeout, env=env)
+    base = dict(env or os.environ); home0 = os.environ.get("HOME", str(Path.home()))
+    h = host / ".cerata-home"; h.mkdir(exist_ok=True)
+    benv = {**base, "HOME": str(h), "npm_config_cache": str(h / ".npm"),
+            "CARGO_HOME": base.get("CARGO_HOME", f"{home0}/.cargo"), "RUSTUP_HOME": base.get("RUSTUP_HOME", f"{home0}/.rustup"),
+            "PYTHONUSERBASE": base.get("PYTHONUSERBASE", f"{home0}/.local"), "CARGO_NET_OFFLINE": "true",
+            "SANDBOX_HIDE": ":".join([f"{home0}/.ssh", f"{home0}/.git-credentials", f"{home0}/.gitconfig", f"{home0}/.config/gh"]),
+            "SANDBOX_TIMEOUT": str(timeout), "SANDBOX_MEM": os.environ.get("SANDBOX_MEM", "8192")}
+    if "CARGO_TARGET_DIR" in benv and not str(benv["CARGO_TARGET_DIR"]).startswith(str(host)):
+        benv["CARGO_TARGET_DIR"] = str(host / ".cerata-target")   # the outside cache is read-only in the box; see with_target
+    return subprocess.run(["bash", str(SANDBOX_RUN), str(host), "--", "bash", "-c", 'cd -- "$1" || exit 126; eval "$2"', "boxed", str(wd), script],
+                          capture_output=True, text=True, timeout=timeout + 15, env=benv)
+
+
+def with_target(host: Path, fn):
+    """Move the per-repo cargo cache into the clone for a boxed run, and back after (cold build if it can't move)."""
+    if not (host / "Cargo.toml").exists() or not sandbox_enabled():
+        return fn()
+    cache = Path(cargo_env(host)["CARGO_TARGET_DIR"]); inside = host / ".cerata-target"; moved = False
+    try:
+        cache.mkdir(parents=True, exist_ok=True); os.rename(cache, inside); moved = True
+    except OSError:
+        pass
+    try:
+        return fn()
+    finally:
+        if moved:
+            try:
+                cache.parent.mkdir(parents=True, exist_ok=True); os.rename(inside, cache)
+            except OSError as e:
+                print(f"cargo cache not restored: {e}")
+
+
 # -------------------------------------------------------------- validate --
 
 def run_repro(host: Path, f: Dict, timeout: int = 300) -> Tuple[bool, str]:
     """True when the finding's command now PASSES (the defect is gone)."""
+    return with_target(host, lambda: _run_repro(host, f, timeout))
+
+
+def _run_repro(host: Path, f: Dict, timeout: int) -> Tuple[bool, str]:
     rp = f["evidence"]["repro"]
     wd = host / (rp.get("workdir") or ".")
     timeout = max(timeout, int(rp.get("timeout_s") or 0))
     env = cargo_env(host) if (host / "Cargo.toml").exists() else None
     out = ""
     if rp.get("setup"):
-        s = subprocess.run(["bash", "-lc", rp["setup"]], cwd=wd, capture_output=True, text=True, timeout=timeout, env=env)
+        s = boxed(host, wd, rp["setup"], timeout, env)
         out += f"$ {rp['setup']}\n{s.stdout}{s.stderr}\n"
         if s.returncode != 0:
             return False, out + f"(setup exited {s.returncode})"
     try:
-        r = subprocess.run(["bash", "-lc", rp["cmd"]], cwd=wd, capture_output=True, text=True, timeout=timeout, env=env)
+        r = boxed(host, wd, rp["cmd"], timeout, env)
     except subprocess.TimeoutExpired:
         return False, out + f"$ {rp['cmd']}\n(timed out after {timeout}s)"
     out += f"$ {rp['cmd']}\n{r.stdout[-4000:]}{r.stderr[-4000:]}\n(exit {r.returncode})"
@@ -308,7 +378,10 @@ def cargo_env(host: Path) -> Dict[str, str]:
 def install_deps(host: Path, log=print) -> None:
     for d in sorted({p.parent for p in host.rglob("package-lock.json") if "node_modules" not in p.parts}):
         log(f"npm ci in {d.relative_to(host) or '.'}")
-        subprocess.run(["npm", "ci", "--silent", "--no-audit", "--no-fund"], cwd=d, capture_output=True, timeout=600)
+        scripts = ["--ignore-scripts"] if sandbox_enabled(log) else []      # install scripts run boxed, before the suite
+        subprocess.run(["npm", "ci", "--silent", "--no-audit", "--no-fund", *scripts], cwd=d, capture_output=True, timeout=600)
+        if scripts:
+            boxed(host, d, "npm rebuild --silent", 600)
     req = host / "requirements.txt"
     if req.exists():
         subprocess.run(["python3", "-m", "pip", "install", "-q", "--break-system-packages", "-r", str(req)],
@@ -319,6 +392,10 @@ def install_deps(host: Path, log=print) -> None:
 
 
 def run_suite(host: Path, timeout: int = 600, written: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
+    return with_target(host, lambda: _run_suite(host, timeout, written))
+
+
+def _run_suite(host: Path, timeout: int, written: Optional[List[str]]) -> Tuple[Optional[bool], str]:
     cmds = suite_cmds(host, written)
     if not cmds:
         return None, "(no test suite detected)"
@@ -329,7 +406,7 @@ def run_suite(host: Path, timeout: int = 600, written: Optional[List[str]] = Non
     for d, cmd in cmds:
         where = str(d.relative_to(host)) or "."
         try:
-            r = subprocess.run(cmd, cwd=d, capture_output=True, text=True, timeout=timeout, env=env)
+            r = boxed(host, d, shlex.join(cmd), timeout, env)
         except subprocess.TimeoutExpired:
             ok = False; out.append(f"[{where}] $ {' '.join(cmd)}\n(timed out)"); continue
         ok = ok and r.returncode == 0
