@@ -36,6 +36,20 @@ class OverseeNetwork(unittest.TestCase):
         self.assertEqual(calls, [("https://github.com/o/home.git", "goals/a/goal.json", 4), ("https://github.com/o/other.git", "goals/r/goal.json", 9)])
 
 
+class OverseeHold(unittest.TestCase):
+    def test_hold_means_nothing_is_measured_or_filed(self):
+        import json, subprocess as sp, tempfile, pathlib
+        d = pathlib.Path(tempfile.mkdtemp())
+        def fake_clone(cmd, *a, **k):
+            dest = pathlib.Path(cmd[-1]); (dest / "goals" / "g").mkdir(parents=True)
+            (dest / "goals" / "g" / "goal.json").write_text(json.dumps({"name": "g", "title": "t", "acceptance": "false", "hold": True}))
+            return sp.CompletedProcess(cmd, 0, "", "")
+        with mock.patch.object(oversee, "STATE", d / "s.json"), mock.patch.object(oversee.subprocess, "run", side_effect=fake_clone), \
+             mock.patch.object(oversee, "run_acceptance") as ra, mock.patch.object(oversee, "propose") as pr, redirect_stdout(io.StringIO()):
+            self.assertEqual(oversee.tick("https://github.com/o/r.git", "goals/g/goal.json", "t", str(d), None), "held")
+        ra.assert_not_called(); pr.assert_not_called()
+
+
 class OverseeDry(unittest.TestCase):
     def test_dry_run_never_comments(self):
         with mock.patch.dict("os.environ", {"OVERSEER_DRY": "1"}), mock.patch.object(oversee, "gh") as gh, redirect_stdout(io.StringIO()):

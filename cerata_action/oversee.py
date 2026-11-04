@@ -235,6 +235,9 @@ def tick(repo_url: str, goal_path: str, token: str, keys_home: str, track_pr: Op
             raise RuntimeError(f"clone: {r.stderr[-300:]}")
         goal = json.loads((host / goal_path).read_text())
         allst = load_state(goal["name"]); st = allst[goal["name"]]
+        if goal.get("hold"):
+            log(f"{goal['name']}: on hold (goal.json says hold); not measuring or filing")
+            return "held"
         if st["state"] in ("done", "stalled"):
             log(f"{goal['name']}: {st['state']} since round {st['round']}; nothing to do")
             return st["state"]
