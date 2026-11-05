@@ -213,6 +213,34 @@ def file_signed(keys_home: str, claims: Dict) -> Optional[str]:
     return json.loads(r.stdout.strip().splitlines()[-1]).get("proposal_event_id")
 
 
+# Findings this pair filed that no fix can pass, retired with a reason (the ledger keeps them as record).
+RETIRE = {f: "Laid from review 5b094b48 by a panel that could not see the repo: the test loads /help from helpcenter/dist/, "
+             "which is gitignored, so it 404s in a fresh clone and no fix can turn it green. Superseded by the re-review."
+          for f in ("c2477eb0-9f27-4c22-b60a-9fc5626a3a4c", "cc6ae226-daa9-4ca5-94fa-130c02b071f1", "e583b956-929e-4934-be29-97e23516cad5")}
+
+
+def retire(keys_home: str, findings: Dict[str, str], dry: bool = False) -> int:
+    """Supersede findings this overseer's pair filed. Idempotent: the ledger answers duplicate once retired."""
+    js = ("import { signJws, post } from " + json.dumps(CLI) + "; import { readFileSync } from 'node:fs'; import { randomBytes } from 'node:crypto';"
+          "const k = JSON.parse(readFileSync(process.env.TATEMAE_HOME + '/keys.json', 'utf8')); const now = Math.floor(Date.now()/1000);"
+          "const a = JSON.parse(process.argv[1]);"
+          "const t = signJws({ privateJwk: k.privateJwk, header: { typ: 'buildup-supersede+jwt' }, claims: { ...a, sub: k.pair_id, iat: now, exp: now + 600, jti: randomBytes(8).toString('hex') } });"
+          "console.log(JSON.stringify(await post({ type: 'finding_superseded', supersede_token: t })));")
+    n = 0
+    for fid, reason in findings.items():
+        if dry or os.environ.get("OVERSEER_DRY") == "1":
+            log(f"[dry] would retire {fid}"); continue
+        r = subprocess.run(["node", "--input-type=module", "-e", js, json.dumps({"finding_event_id": fid, "reason": reason})],
+                           capture_output=True, text=True, env={**os.environ, "TATEMAE_HOME": keys_home})
+        out = (r.stdout or "").strip().splitlines()
+        if r.returncode != 0:
+            log(f"retire {fid[:8]} failed: {(r.stderr or r.stdout)[-300:]}"); continue
+        res = json.loads(out[-1]) if out else {}
+        if not res.get("duplicate"):
+            log(f"retired {fid[:8]}: {res}"); n += 1
+    return n
+
+
 REVIEW_MARK = "<!-- buildup-review -->"
 
 
@@ -367,6 +395,10 @@ def main(argv: List[str]) -> int:
         return 2
     if "--all-goals" in argv:
         rc = 0
+        try:
+            retire(keys_home, RETIRE, dry="--dry-run" in argv)
+        except Exception as e:
+            log(f"retire failed: {e}")
         for r in [repo] + network_repos(repo, token):
             try:
                 file_reviews(r, token, keys_home, dry="--dry-run" in argv)
