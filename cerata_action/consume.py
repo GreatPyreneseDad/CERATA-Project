@@ -289,11 +289,12 @@ _LICENSE_NAME = re.compile(r"^(licen[cs]e|copying|notice)([-._].*)?$", re.I)
 _TEST_DIRS = {"tests", "test", "__tests__", "spec", "specs"}
 
 
-def protected_paths(pre_existing, host: Optional[Path] = None) -> set:
+def protected_paths(pre_existing, host: Optional[Path] = None, allow=frozenset()) -> set:
     """Read-only to the model: existing tests and test helpers (they pin CLASSIC), plus anything the
     maintainers list in .cerata/protect (one path or glob per line, # comments)."""
     import fnmatch
-    out = {f for f in pre_existing if _is_test(f) or set(f.split("/")[:-1]) & _TEST_DIRS}
+    # allow: existing tests a finding names as ones that must change. The maintainers' listing below still wins.
+    out = {f for f in pre_existing if (_is_test(f) or set(f.split("/")[:-1]) & _TEST_DIRS) and f not in allow}
     listing = host / ".cerata" / "protect" if host else None
     if listing and listing.is_file():
         globs = [l.split("#")[0].strip() for l in listing.read_text(errors="ignore").splitlines()]

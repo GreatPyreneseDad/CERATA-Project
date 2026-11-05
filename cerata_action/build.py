@@ -122,7 +122,7 @@ class BuildError(RuntimeError):
     pass
 
 
-BUILD_VERSION = 8   # bump when the harness changes enough that a past decline deserves another attempt
+BUILD_VERSION = 9   # bump when the harness changes enough that a past decline deserves another attempt
 
 _EDIT = re.compile(r'<edit\s+path="([^"]+)">(.*?)</edit>', re.S)
 _PAIR = re.compile(r"<find>\n?(.*?)\n?</find>\s*<replace>\n?(.*?)\n?</replace>", re.S)
@@ -456,7 +456,11 @@ def build(llm, host: Path, row: Dict, mandate: Dict, prey_ctx: str = "", note: s
     if note:
         ctx += f"\n\n### Operator note\n{note}"
     pre = set(C.git_ls(host))
-    protected = C.protected_paths(pre, host)
+    # an existing test the finding names by path (because it asserts the behavior being fixed) may change; no other may
+    named = {x for x in pre if x in str(f.get("defect", "")) and in_scope(x, mandate["scope_paths"])}
+    protected = C.protected_paths(pre, host, allow=named)
+    if named & set(pre):
+        log(f"tests the finding says must change: {sorted(named)}")
 
     messages = [{"role": "user", "content": ctx + "\n\n" + SURVEY.format(max_read=C.MAX_HOST_READ)}]
     reply = llm.complete(SYSTEM, messages)
